@@ -32,6 +32,7 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.tasks.BuildWrapper;
@@ -39,16 +40,10 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import org.apache.commons.lang.StringUtils;
-import org.apache.sshd.agent.unix.AgentServer;
-import org.apache.sshd.common.util.SecurityUtils;
-import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.openssl.PasswordFinder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.security.KeyPair;
 import java.util.Map;
 
 /**
@@ -182,7 +177,23 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         public SSHAgentEnvironment(Launcher launcher, final BuildListener listener,
                                    final SSHUserPrivateKey sshUserPrivateKey) throws Throwable {
-            agent = launcher.getChannel().call(new RemoteAgentStarter(listener));
+            RemoteAgent agent = null;
+            listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
+            for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
+                if (factory.isSupported(launcher, listener)) {
+                    try {
+                        listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
+                        agent = factory.start(launcher, listener);
+                        break;
+                    } catch (Throwable t) {
+                        // ignore
+                    }
+                }
+            }
+            if (agent == null) {
+                throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
+            }
+            this.agent = agent;
             final Secret passphrase = sshUserPrivateKey.getPassphrase();
             agent.addIdentity(sshUserPrivateKey.getPrivateKey(),
                     passphrase == null ? null : passphrase.getPlainText(),

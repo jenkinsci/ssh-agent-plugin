@@ -1,7 +1,10 @@
-package com.cloudbees.jenkins.plugins.sshagent;
+package com.cloudbees.jenkins.plugins.sshagent.mina;
 
+import com.cloudbees.jenkins.plugins.sshagent.Messages;
+import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.Extension;
 import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import org.apache.sshd.agent.unix.AgentServer;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.bouncycastle.openssl.PEMReader;
@@ -14,8 +17,7 @@ import java.security.KeyPair;
 /**
  * An implementation that uses Apache SSH to provide the Agent. This requires Tomcat-Native.
  */
-@Extension(ordinal = 0.0)
-public class RemoteAgentImpl implements RemoteAgent {
+public class MinaRemoteAgent implements RemoteAgent {
     /**
      * Our agent.
      */
@@ -27,7 +29,7 @@ public class RemoteAgentImpl implements RemoteAgent {
     /**
      * The listener in case we need to report exceptions
      */
-    private final BuildListener listener;
+    private final TaskListener listener;
 
     /**
      * Constructor.
@@ -35,7 +37,7 @@ public class RemoteAgentImpl implements RemoteAgent {
      * @param listener the listener.
      * @throws Exception if the agent could not start.
      */
-    public RemoteAgentImpl(BuildListener listener) throws Exception {
+    public MinaRemoteAgent(TaskListener listener) throws Exception {
         this.listener = listener;
         agent = new AgentServer();
         socket = agent.start();
