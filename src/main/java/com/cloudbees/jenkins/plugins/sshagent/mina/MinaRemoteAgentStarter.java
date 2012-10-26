@@ -51,6 +51,8 @@ public class MinaRemoteAgentStarter implements Callable<RemoteAgent, Throwable> 
      * {@inheritDoc}
      */
     public RemoteAgent call() throws Throwable {
-        return Channel.current().export(RemoteAgent.class, new MinaRemoteAgent(listener));
+        final MinaRemoteAgent instance = new MinaRemoteAgent(listener);
+        final Channel channel = Channel.current();
+        return channel == null ? instance : channel.export(RemoteAgent.class, instance);
     }
 }
