@@ -34,7 +34,7 @@
   </parent>
 
   <artifactId>ssh-agent</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.1</version>
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
