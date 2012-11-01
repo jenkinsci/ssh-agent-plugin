@@ -95,8 +95,7 @@ public class MinaRemoteAgent implements RemoteAgent {
                 r.close();
             }
         } catch (Exception e) {
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UnableToReadKey(e.getMessage()));
-            e.printStackTrace(listener.getLogger());
+            e.printStackTrace(listener.error(Messages.SSHAgentBuildWrapper_UnableToReadKey(e.getMessage())));
         }
     }
 
