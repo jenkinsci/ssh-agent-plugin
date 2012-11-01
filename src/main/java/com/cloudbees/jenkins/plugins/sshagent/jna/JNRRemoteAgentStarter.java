@@ -22,43 +22,37 @@
  * THE SOFTWARE.
  */
 
-package com.cloudbees.jenkins.plugins.sshagent.unix;
+package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
-import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
-import hudson.Extension;
-import hudson.Launcher;
 import hudson.model.TaskListener;
+import hudson.remoting.Callable;
+import hudson.remoting.Channel;
 
 /**
- * Fall back to the raw unix command... but favour this the least as cannot support passphrases without TTY emulation.
+ * Callable to start the remote agent.
  */
-@Extension(ordinal = Double.MIN_VALUE)
-public class UnixRemoteAgentFactory extends RemoteAgentFactory {
+public class JNRRemoteAgentStarter implements Callable<RemoteAgent, Throwable> {
+    /**
+     * Need to pass this through.
+     */
+    private final TaskListener listener;
 
     /**
-     * {@inheritDoc}
+     * Constructor.
+     *
+     * @param listener the listener to pass to the agent.
      */
-    @Override
-    public String getDisplayName() {
-        return "Unix ssh-agent command";
+    public JNRRemoteAgentStarter(TaskListener listener) {
+        this.listener = listener;
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public boolean isSupported(Launcher launcher, final TaskListener listener) {
-        return launcher.isUnix();
+    public RemoteAgent call() throws Throwable {
+        final JNRRemoteAgent instance = new JNRRemoteAgent(listener);
+        final Channel channel = Channel.current();
+        return channel == null ? instance : channel.export(RemoteAgent.class, instance);
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public RemoteAgent start(Launcher launcher, final TaskListener listener) throws Throwable {
-        return launcher.getChannel().call(new UnixRemoteAgentStarter(launcher, listener));
-    }
-
 }
-

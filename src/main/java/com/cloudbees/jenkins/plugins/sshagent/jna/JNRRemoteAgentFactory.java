@@ -22,43 +22,43 @@
  * THE SOFTWARE.
  */
 
-package com.cloudbees.jenkins.plugins.sshagent.unix;
+package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
+import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
+import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
-import hudson.remoting.Channel;
 
 /**
- * @author stephenc
- * @since 26/10/2012 15:45
+ * A factory that uses the Apache Mina/SSH library support to natively provide a ssh-agent implementation on platforms
+ * supported by jnr-unixsocket
  */
-public class UnixRemoteAgentStarter implements Callable<RemoteAgent, Throwable> {
-    /**
-     * Need to pass this through.
-     */
-    private final TaskListener listener;
-    private final Launcher launcher;
+@Extension
+public class JNRRemoteAgentFactory extends RemoteAgentFactory {
 
     /**
-     * Constructor.
-     *
-     * @param launcher the launcher to pass to the agent
-     * @param listener the listener to pass to the agent.
+     * {@inheritDoc}
      */
-    public UnixRemoteAgentStarter(Launcher launcher, TaskListener listener) {
-        this.listener = listener;
-        this.launcher = launcher;
+    @Override
+    public String getDisplayName() {
+        return "Java/JNR ssh-agent";
     }
 
     /**
      * {@inheritDoc}
      */
-    public RemoteAgent call() throws Throwable {
-        final UnixRemoteAgent instance = new UnixRemoteAgent(launcher, listener);
-        final Channel channel = Channel.current();
-        return channel == null ? instance : channel.export(RemoteAgent.class, instance);
+    @Override
+    public boolean isSupported(Launcher launcher, final TaskListener listener) {
+        return launcher.isUnix();
     }
-}
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RemoteAgent start(Launcher launcher, final TaskListener listener) throws Throwable {
+        return launcher.getChannel().call(new JNRRemoteAgentStarter(listener));
+    }
+
+}
