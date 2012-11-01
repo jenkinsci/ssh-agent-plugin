@@ -93,11 +93,11 @@ public class AgentServer {
         String name;
         if (OsUtils.isUNIX()) {
             File socket = File.createTempFile("jenkins", ".jnr");
-            socket.delete();
+            FileUtils.deleteQuietly(socket);
             name = socket.getAbsolutePath();
         } else {
             File socket = File.createTempFile("jenkins", ".jnr");
-            socket.delete();
+            FileUtils.deleteQuietly(socket);
             name = "\\\\.\\pipe\\" + socket.getName();
         }
         return name;
