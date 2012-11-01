@@ -43,7 +43,7 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public String getDisplayName() {
-        return "Java/JNI ssh-agent";
+        return "Java/tomcat-native ssh-agent";
     }
 
     /**

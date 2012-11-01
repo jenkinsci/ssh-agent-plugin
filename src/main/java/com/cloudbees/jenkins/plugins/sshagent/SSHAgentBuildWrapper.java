@@ -44,6 +44,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -98,8 +99,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         try {
             return new SSHAgentEnvironment(launcher, listener, userPrivateKey);
         } catch (Throwable e) {
-            listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
-            e.printStackTrace(listener.getLogger());
+            e.printStackTrace(listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent()));
             return null;
         }
     }
@@ -179,6 +179,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                                    final SSHUserPrivateKey sshUserPrivateKey) throws Throwable {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
+            Map<String,Throwable> faults = new LinkedHashMap<String, Throwable>();
             for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
@@ -186,11 +187,17 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                         agent = factory.start(launcher, listener);
                         break;
                     } catch (Throwable t) {
-                        // ignore
+                        faults.put(factory.getDisplayName(), t);
                     }
                 }
             }
             if (agent == null) {
+                listener.getLogger().println("[ssh-agent] FATAL: Could not find a suitable ssh-agent provider");
+                listener.getLogger().println("[ssh-agent] Diagnostic report");
+                for (Map.Entry<String,Throwable> fault: faults.entrySet()) {
+                    listener.getLogger().println("[ssh-agent] * " + fault.getKey());
+                    fault.getValue().printStackTrace(listener.getLogger());
+                }
                 throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
             }
             this.agent = agent;
