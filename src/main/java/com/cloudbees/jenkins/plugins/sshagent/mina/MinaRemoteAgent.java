@@ -77,7 +77,10 @@ public class MinaRemoteAgent implements RemoteAgent {
      */
     public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
         if (!SecurityUtils.isBouncyCastleRegistered()) {
-            throw new IllegalStateException("BouncyCastle must be registered as a JCE provider");
+            SecurityUtils.setRegisterBouncyCastle(true);
+            if (!SecurityUtils.isBouncyCastleRegistered()) {
+                throw new IllegalStateException("BouncyCastle must be registered as a JCE provider");
+            }
         }
         try {
             PEMReader r = new PEMReader(new StringReader(privateKey),
