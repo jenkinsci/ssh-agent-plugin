@@ -24,11 +24,15 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserListBoxModel;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -39,11 +43,11 @@ import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -59,7 +63,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     /**
      * Constructs a new instance.
      *
-     * @param user the {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
+     * @param user the {@link SSHUserPrivateKey#getId()} of the credentials to use.
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
@@ -68,9 +72,9 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     }
 
     /**
-     * Gets the {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
+     * Gets the {@link SSHUserPrivateKey#getId()} of the credentials to use.
      *
-     * @return the {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
+     * @return the {@link SSHUserPrivateKey#getId()} of the credentials to use.
      */
     @SuppressWarnings("unused") // used via stapler
     public String getUser() {
@@ -85,7 +89,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             throws IOException, InterruptedException {
         SSHUserPrivateKey userPrivateKey = null;
         for (SSHUserPrivateKey u : CredentialsProvider
-                .lookupCredentials(SSHUserPrivateKey.class, build.getProject(), ACL.SYSTEM)) {
+                .lookupCredentials(SSHUserPrivateKey.class, build.getProject(), ACL.SYSTEM, null)) {
             if (user.equals(u.getId())) {
                 userPrivateKey = u;
                 break;
@@ -107,12 +111,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     /**
      * Helper method that returns a safe description of a {@link SSHUser}.
      *
-     * @param sshUser the credentials.
+     * @param c the credentials.
      * @return the description.
      */
     @NonNull
-    private static String description(@NonNull SSHUser sshUser) {
-        return StringUtils.isEmpty(sshUser.getDescription()) ? sshUser.getUsername() : sshUser.getDescription();
+    private static String description(@NonNull StandardUsernameCredentials c) {
+        String description = Util.fixEmptyAndTrim(c.getDescription());
+        return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
 
     /**
@@ -144,15 +149,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         @SuppressWarnings("unused") // used by stapler
         public ListBoxModel doFillUserItems() {
-            ListBoxModel m = new ListBoxModel();
-
             Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-            // we only want the users with private keys as they are the only ones valid for an agent
-            for (SSHUser u : CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, item, ACL.SYSTEM)) {
-                m.add(description(u), u.getId());
-            }
-
-            return m;
+            return new SSHUserListBoxModel().withAll(
+                    CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, item, ACL.SYSTEM,
+                            Collections.<DomainRequirement>emptyList())
+            );
         }
 
     }
@@ -179,7 +180,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                                    final SSHUserPrivateKey sshUserPrivateKey) throws Throwable {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-            Map<String,Throwable> faults = new LinkedHashMap<String, Throwable>();
+            Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
             for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
@@ -194,7 +195,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             if (agent == null) {
                 listener.getLogger().println("[ssh-agent] FATAL: Could not find a suitable ssh-agent provider");
                 listener.getLogger().println("[ssh-agent] Diagnostic report");
-                for (Map.Entry<String,Throwable> fault: faults.entrySet()) {
+                for (Map.Entry<String, Throwable> fault : faults.entrySet()) {
                     listener.getLogger().println("[ssh-agent] * " + fault.getKey());
                     fault.getValue().printStackTrace(listener.getLogger());
                 }
@@ -202,9 +203,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             }
             this.agent = agent;
             final Secret passphrase = sshUserPrivateKey.getPassphrase();
-            agent.addIdentity(sshUserPrivateKey.getPrivateKey(),
-                    passphrase == null ? null : passphrase.getPlainText(),
-                    description(sshUserPrivateKey));
+            final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
+            for (String privateKey : sshUserPrivateKey.getPrivateKeys()) {
+                agent.addIdentity(privateKey, effectivePassphrase, description(sshUserPrivateKey));
+            }
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         }
 
