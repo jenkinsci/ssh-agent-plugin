@@ -27,7 +27,4 @@
   <f:entry title="${%Credentials}" field="user">
     <f:select/>
   </f:entry>
-  <f:entry title="${%Run before SCM}" field="runBeforeSCM">
-    <f:checkbox />
-  </f:entry>
 </j:jelly>

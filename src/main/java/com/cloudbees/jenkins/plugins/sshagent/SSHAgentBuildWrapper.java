@@ -55,7 +55,6 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * The {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
      */
     private final String user;
-    private final boolean runBeforeSCM;
 
     /**
      * Constructs a new instance.
@@ -64,9 +63,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(String user, boolean runBeforeSCM) {
+    public SSHAgentBuildWrapper(String user) {
         this.user = user;
-        this.runBeforeSCM = runBeforeSCM;
     }
 
     /**
@@ -80,26 +78,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     }
 
     /**
-     * Gets the runBeforeSCM setting. If set to true, this will create the environment before SCM
-     * (at {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper#preCheckout(hudson.model.AbstractBuild, hudson.Launcher, hudson.model.BuildListener)}).
-     * Otherwise it will return the environment in
-     * {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper#setUp(hudson.model.AbstractBuild, hudson.Launcher, hudson.model.BuildListener)}.
-     *
-     * @return true if SSHAgentEnvironment gets created in preCheckout(...), otherwise created in setUp(...).
-     */
-    @SuppressWarnings("unused") // used via stapler
-    public boolean getRunBeforeSCM() {
-        return runBeforeSCM;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     public void preCheckout(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-        if (runBeforeSCM) {
-            build.getEnvironments().add(createSSHAgentEnvironment(build, launcher, listener));
-        }
+        build.getEnvironments().add(createSSHAgentEnvironment(build, launcher, listener));
     }
 
     /**
@@ -108,14 +91,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     @Override
     public Environment setUp(AbstractBuild build, final Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
-        if (runBeforeSCM) {
-            // Jenkins needs this:
-            // null would stop the build, and super implementation throws UnsupportedOperationException
-            return new Environment() {
-            };
-        }
-
-        return createSSHAgentEnvironment(build, launcher, listener);
+        // Jenkins needs this:
+        // null would stop the build, and super implementation throws UnsupportedOperationException
+        return new Environment() {
+        };
     }
 
     private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener) {
