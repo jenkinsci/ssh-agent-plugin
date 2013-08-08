@@ -85,8 +85,23 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * {@inheritDoc}
      */
     @Override
+    public void preCheckout(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+        build.getEnvironments().add(createSSHAgentEnvironment(build, launcher, listener));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Environment setUp(AbstractBuild build, final Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
+        // Jenkins needs this:
+        // null would stop the build, and super implementation throws UnsupportedOperationException
+        return new Environment() {
+        };
+    }
+
+    private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener) {
         SSHUserPrivateKey userPrivateKey = null;
         for (SSHUserPrivateKey u : CredentialsProvider
                 .lookupCredentials(SSHUserPrivateKey.class, build.getProject(), ACL.SYSTEM, null)) {
