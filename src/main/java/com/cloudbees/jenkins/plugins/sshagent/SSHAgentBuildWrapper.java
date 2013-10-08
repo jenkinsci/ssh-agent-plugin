@@ -44,10 +44,13 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -217,7 +220,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                 listener.getLogger().println("[ssh-agent] Diagnostic report");
                 for (Map.Entry<String, Throwable> fault : faults.entrySet()) {
                     listener.getLogger().println("[ssh-agent] * " + fault.getKey());
-                    fault.getValue().printStackTrace(listener.getLogger());
+                    StringWriter sw = new StringWriter();
+                    fault.getValue().printStackTrace(new PrintWriter(sw));
+                    for (String line: StringUtils.split(sw.toString(),"\n")) {
+                        listener.getLogger().println("[ssh-agent]     " + line);
+                    }
                 }
                 throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
             }
