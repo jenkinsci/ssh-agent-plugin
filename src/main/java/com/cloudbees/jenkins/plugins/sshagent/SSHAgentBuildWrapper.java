@@ -41,6 +41,7 @@ import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
+import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -101,7 +102,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         };
     }
 
-    private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener)  throws IOException, InterruptedException  {
         SSHUserPrivateKey userPrivateKey = null;
         for (SSHUserPrivateKey u : CredentialsProvider
                 .lookupCredentials(SSHUserPrivateKey.class, build.getProject(), ACL.SYSTEM, null)) {
@@ -117,9 +118,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(description(userPrivateKey)));
         try {
             return new SSHAgentEnvironment(launcher, listener, userPrivateKey);
-        } catch (Throwable e) {
+        } catch (IOException e) {
+            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
+        } catch (InterruptedException e) {
             e.printStackTrace(listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent()));
-            return null;
+            throw e;
+        } catch (Throwable e) {
+            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
         }
     }
 
