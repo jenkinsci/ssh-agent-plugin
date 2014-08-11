@@ -61,6 +61,7 @@
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/ssh-agent-plugin</url>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
@@ -113,7 +114,7 @@
     <dependency>
       <groupId>com.cloudbees.util</groupId>
       <artifactId>jnr-unixsocket-nodep</artifactId>
-      <version>0.3</version>
+      <version>0.3.1</version>
     </dependency>
     <!-- plugin dependencies -->
     <dependency>
