@@ -24,7 +24,11 @@
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+  <st:adjunct includes="lib.credentials.select.select"/>
   <f:entry title="${%Credentials}">
     <f:repeatableProperty  field="credentialHolders" minimum="1"/>
+  </f:entry>
+  <f:entry field="ignoreMissing">
+    <f:checkbox title="${%Ignore missing credentials}" default="false"/>
   </f:entry>
 </j:jelly>

@@ -80,28 +80,31 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     private final List<String> credentialIds;
 
+    private final boolean ignoreMissing;
+
     /**
      * Constructs a new instance.
      *
      * @param user the {@link SSHUserPrivateKey#getId()} of the credentials to use.
-     * @deprecated use {@link #SSHAgentBuildWrapper(java.util.List)}
+     * @deprecated use {@link #SSHAgentBuildWrapper(java.util.List,boolean)}
      */
     @Deprecated
     @SuppressWarnings("unused") // used via stapler
     public SSHAgentBuildWrapper(String user) {
-        this(Collections.singletonList(user));
+        this(Collections.singletonList(user), false);
     }
 
     /**
      * Constructs a new instance.
      *
-     * @param credentialHolders the {@link SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
+     * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
+     * @param ignoreMissing
      * @since 1.5
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders) {
-        this(CredentialHolder.toIdList(credentialHolders));
+    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing) {
+        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing);
     }
 
     /**
@@ -112,8 +115,9 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @since 1.5
      */
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(List<String> credentialIds) {
+    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
         this.credentialIds = new ArrayList<String>(new LinkedHashSet<String>(credentialIds));
+        this.ignoreMissing = ignoreMissing;
     }
 
     /**
@@ -123,7 +127,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     private Object readResolve() throws ObjectStreamException {
         if (user != null) {
-            return new SSHAgentBuildWrapper(Collections.singletonList(user));
+            return new SSHAgentBuildWrapper(Collections.singletonList(user),false);
         }
         return this;
     }
@@ -149,6 +153,16 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     public List<String> getCredentialIds() {
         return Collections.unmodifiableList(credentialIds);
+    }
+
+    /**
+     * When {@code true} then any missing credentials will be ignored. When {@code false} then the build will be failed
+     * if any of the required credentials cannot be resolved.
+     * @return {@code true} missing credentials will not cause a build failure.
+     */
+    @SuppressWarnings("unused") // used via stapler
+    public boolean isIgnoreMissing() {
+        return ignoreMissing;
     }
 
     /**
@@ -190,16 +204,18 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
-        Set<String> ids = new LinkedHashSet<String>(getCredentialIds());
-        for (SSHUserPrivateKey u : CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, build.getProject(),
-                ACL.SYSTEM, Collections.<DomainRequirement>emptyList())) {
-            if (ids.contains(u.getId())) {
-                userPrivateKeys.add(u);
+        for (String id: new LinkedHashSet<String>(getCredentialIds())) {
+            final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(
+                    id,
+                    SSHUserPrivateKey.class,
+                    build
+            );
+            if (c == null && !ignoreMissing) {
+                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
             }
-        }
-        if (userPrivateKeys.isEmpty()) {
-            listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
-            return null;
+            if (c != null && !userPrivateKeys.contains(c)) {
+                userPrivateKeys.add(c);
+            }
         }
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(description(userPrivateKey)));
