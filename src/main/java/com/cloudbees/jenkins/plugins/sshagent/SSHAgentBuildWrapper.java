@@ -95,9 +95,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     /**
      * Constructs a new instance.
      *
-     * @param credentialHolders the {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId
-     * ()}s
-     *                          of the credentials to use.
+     * @param credentialHolders the {@link SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
      * @since 1.5
      */
     @DataBoundConstructor
