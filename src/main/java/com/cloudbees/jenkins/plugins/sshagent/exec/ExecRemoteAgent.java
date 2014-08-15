@@ -101,14 +101,6 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return socket;
     }
 	
-	private boolean setReadOnlyForOwner(File file) {
-		boolean ok = file.setExecutable(false, false);
-		ok &= file.setWritable(false, false);
-		ok &= file.setReadable(false, false);
-		ok &= file.setReadable(true, true);
-		return ok;
-	}
-	
     /**
      * {@inheritDoc}
      */
@@ -206,6 +198,14 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return agentOutput.substring(pos, end);
 	}
 	
+	private boolean setReadOnlyForOwner(File file) {
+		boolean ok = file.setExecutable(false, false);
+		ok &= file.setWritable(false, false);
+		ok &= file.setReadable(false, false);
+		ok &= file.setReadable(true, true);
+		return ok;
+	}
+	
 	private File createAskpassScript() throws IOException {
 		final String suffix;
 		final String script;
@@ -221,7 +221,9 @@ public class ExecRemoteAgent implements RemoteAgent {
 		askpassWriter.write(script);
 		askpassWriter.close();
 		
-		askpass.setExecutable(true, false);
+		// executable only for a current user
+		askpass.setExecutable(false, false);
+		askpass.setExecutable(true, true);
 		return askpass;
 	}
 }
