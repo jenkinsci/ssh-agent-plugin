@@ -26,30 +26,26 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 
 import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
+
 import hudson.model.TaskListener;
-import org.apache.sshd.common.util.SecurityUtils;
-import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.openssl.PasswordFinder;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.security.KeyPair;
-
-import java.lang.Runtime;
 import java.lang.Process;
-import java.io.InputStream;
-import java.io.ByteArrayOutputStream;
 import java.lang.ProcessBuilder;
+
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import java.io.IOException;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.sshd.common.util.OsUtils;
 
 /**
  * An implementation that uses native SSH agent installed on a system.
@@ -86,8 +82,6 @@ public class ExecRemoteAgent implements RemoteAgent {
         this.processBuilder = new ProcessBuilder();
 		this.listener = listener;
 		
-		listener.getLogger().println("ExecRemoteAgent::ExecRemoteAgent - starting native ssh-agent");
-		
 		this.agent = execProcess("ssh-agent");
 		Map<String, String> agentEnv = parseAgentEnv(this.agent);
 		
@@ -99,10 +93,81 @@ public class ExecRemoteAgent implements RemoteAgent {
 		// set agent environment to the process builder to provide it to ssh-add which will be executed later
 		processBuilder.environment().putAll(agentEnv);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public String getSocket() {
+		return socket;
+    }
 	
-	private Process execProcess(String command) throws IOException {
-		listener.getLogger().println("ExecRemoteAgent::execProcess - command: " + command);
+	private boolean setReadOnlyForOwner(File file) {
+		boolean ok = file.setExecutable(false, false);
+		ok &= file.setWritable(false, false);
+		ok &= file.setReadable(false, false);
+		ok &= file.setReadable(true, true);
+		return ok;
+	}
+	
+    /**
+     * {@inheritDoc}
+     */
+    public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
+        File keyFile = File.createTempFile("private_key_", ".key");
+		FileWriter keyWriter = new FileWriter(keyFile);
+		keyWriter.write(privateKey);
+		keyWriter.close();
+		setReadOnlyForOwner(keyFile);
 		
+		File askpass = createAskpassScript();
+		
+		processBuilder.environment().put("SSH_PASSPHRASE", passphrase);
+		processBuilder.environment().put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
+		processBuilder.environment().put("SSH_ASKPASS", askpass.getPath());
+
+		// TODO: kill agent in case of wrong password
+
+		final Process sshAdd = execProcess("ssh-add " + keyFile.getPath());
+		
+		IOUtils.copy(sshAdd.getErrorStream(), listener.getLogger());
+		IOUtils.copy(sshAdd.getInputStream(), listener.getLogger());
+		
+		try {
+			sshAdd.waitFor();
+		}
+		catch (InterruptedException e) {
+			// waiting or process somehow interrupted
+		}
+		
+		processBuilder.environment().remove("SSH_ASKPASS");
+		processBuilder.environment().remove("DISPLAY");
+		processBuilder.environment().remove("SSH_PASSPHRASE");
+		
+		askpass.delete();
+		
+		if (!keyFile.delete()) {
+			listener.getLogger().println("ExecRemoteAgent::addIdentity - could NOT delete a temp file with a private key!");
+		}
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void stop() {
+		try {
+			execProcess("ssh-agent -k");
+		}
+		catch (IOException e) {
+			listener.error("ExecRemoteAgent::stop - " + e.getCause());
+		}
+		agent.destroy();
+    }
+	
+	/**
+	 * Executes a new process using ProcessBuilder with custom environment variables.
+	 */
+	private Process execProcess(String command) throws IOException {
+		listener.getLogger().println("ExecRemoteAgent::execProcess - " + command);
 		List<String> command_list = Arrays.asList(command.split(" "));
 		processBuilder.command(command_list);
 		Process process = processBuilder.start();
@@ -110,12 +175,9 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return process;
 	}
 	
-	private String getAgentValue(String agentOutput, String envVar) {
-		int pos = agentOutput.indexOf(envVar) + envVar.length() + 1; // +1 for '='
-		int end = agentOutput.indexOf(";", pos);
-		return agentOutput.substring(pos, end);
-	}
-	
+	/**
+	 * Parses ssh-agent output.
+	 */
 	private Map<String,String> parseAgentEnv(Process agent) throws Exception{
 		Map<String, String> env = new HashMap<String, String>();
 		
@@ -134,66 +196,32 @@ public class ExecRemoteAgent implements RemoteAgent {
 		
 		return env;
 	}
-
-    /**
-     * {@inheritDoc}
-     */
-    public String getSocket() {
-        listener.getLogger().println("ExecRemoteAgent::getSocket - socket: " + socket);
-		return socket;
-    }
 	
-	private boolean setReadOnlyForOwner(File file) {
-		boolean ok = file.setExecutable(false, false);
-		ok &= file.setWritable(false, false);
-		ok &= file.setReadable(false, false);
-		ok &= file.setReadable(true, true);
-		return ok;
+	/**
+	 * Parses a value from ssh-agent output.
+	 */
+	private String getAgentValue(String agentOutput, String envVar) {
+		int pos = agentOutput.indexOf(envVar) + envVar.length() + 1; // +1 for '='
+		int end = agentOutput.indexOf(";", pos);
+		return agentOutput.substring(pos, end);
 	}
 	
-    /**
-     * {@inheritDoc}
-     */
-    public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
-        // TODO: handle keys with password
-		if (!passphrase.isEmpty()) {
-			throw new IOException("ExecRemoteAgent::addIdentity - a non empty passphrase, not implemented yet!");
-		}
+	private File createAskpassScript() throws IOException {
+		final String suffix;
+		final String script;
+		// TODO: assuming that ssh-add runs the script in shell, not cmd
+		suffix = ".sh";
+		script = "#!/bin/sh\necho $SSH_PASSPHRASE\n";
+		// for cmd following should work
+		// suffix = ".bat";
+		// script = "@echo %SSH_PASSPHRASE%\n";
 		
-		File keyFile = File.createTempFile("private_key_", ".key");
-		FileWriter keyWriter = new FileWriter(keyFile);
-		keyWriter.write(privateKey);
-		keyWriter.close();
+		File askpass = File.createTempFile("askpass_", suffix);
+		FileWriter askpassWriter = new FileWriter(askpass);
+		askpassWriter.write(script);
+		askpassWriter.close();
 		
-		setReadOnlyForOwner(keyFile);
-		
-		Process sshAdd = execProcess("ssh-add " + keyFile.getPath());
-		IOUtils.copy(sshAdd.getInputStream(), listener.getLogger());
-		IOUtils.copy(sshAdd.getErrorStream(), listener.getLogger());
-		
-		try {
-			sshAdd.waitFor();
-		}
-		catch (InterruptedException e) {
-			// waiting or process somehow interrupted
-		}
-		
-		if (!keyFile.delete()) {
-			listener.getLogger().println("ExecRemoteAgent::addIdentity - could NOT delete a temp file with a private key!");
-		}
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void stop() {
-		listener.getLogger().println("ExecRemoteAgent::stop");
-		try {
-			execProcess("ssh-agent -k");
-		}
-		catch (IOException e) {
-			listener.error("ExecRemoteAgent::stop - " + e.getCause());
-		}
-		agent.destroy();
-    }
+		askpass.setExecutable(true, false);
+		return askpass;
+	}
 }
