@@ -51,8 +51,8 @@ import org.apache.sshd.common.util.OsUtils;
  * An implementation that uses native SSH agent installed on a system.
  */
 public class ExecRemoteAgent implements RemoteAgent {
-    private final String AuthSocketVar = "SSH_AUTH_SOCK";
-	private final String AgentPidVar = "SSH_AGENT_PID";
+    private static final String AuthSocketVar = "SSH_AUTH_SOCK";
+	private static final String AgentPidVar = "SSH_AGENT_PID";
 	
 	/** Process builder keeping environment for all ExecRemoteAgent related processes. */
 	private final ProcessBuilder processBuilder;
@@ -117,11 +117,13 @@ public class ExecRemoteAgent implements RemoteAgent {
 		processBuilder.environment().put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
 		processBuilder.environment().put("SSH_ASKPASS", askpass.getPath());
 
-		// TODO: kill agent in case of wrong password
-
 		final Process sshAdd = execProcess("ssh-add " + keyFile.getPath());
 		
-		IOUtils.copy(sshAdd.getErrorStream(), listener.getLogger());
+		String errorString = streamToString(sshAdd.getErrorStream());
+		if (!errorString.isEmpty()) {
+			errorString += "Check the passphrase for the private key.";
+			listener.getLogger().println(errorString);
+		}
 		IOUtils.copy(sshAdd.getInputStream(), listener.getLogger());
 		
 		try {
@@ -135,7 +137,7 @@ public class ExecRemoteAgent implements RemoteAgent {
 		processBuilder.environment().remove("DISPLAY");
 		processBuilder.environment().remove("SSH_PASSPHRASE");
 		
-		askpass.delete();
+		askpass.delete(); // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
 		
 		if (!keyFile.delete()) {
 			listener.getLogger().println("ExecRemoteAgent::addIdentity - could NOT delete a temp file with a private key!");
@@ -167,16 +169,19 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return process;
 	}
 	
+	private String streamToString(InputStream is) throws IOException {
+		ByteArrayOutputStream os  = new ByteArrayOutputStream();
+		IOUtils.copy(is, os);
+		return os.toString();
+	}
+	
 	/**
 	 * Parses ssh-agent output.
 	 */
 	private Map<String,String> parseAgentEnv(Process agent) throws Exception{
 		Map<String, String> env = new HashMap<String, String>();
 		
-		InputStream agentOutputReader = agent.getInputStream();
-		ByteArrayOutputStream agentOutputStream = new ByteArrayOutputStream();
-		IOUtils.copy(agentOutputReader, agentOutputStream);
-		String agentOutput = agentOutputStream.toString();
+		String agentOutput = streamToString(agent.getInputStream());
 		
 		// get SSH_AUTH_SOCK
 		env.put(AuthSocketVar, getAgentValue(agentOutput, AuthSocketVar));
@@ -198,6 +203,9 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return agentOutput.substring(pos, end);
 	}
 	
+	/**
+	 * Sets file's permissions to readable only for an owner.
+	 */
 	private boolean setReadOnlyForOwner(File file) {
 		boolean ok = file.setExecutable(false, false);
 		ok &= file.setWritable(false, false);
@@ -206,17 +214,24 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return ok;
 	}
 	
+	/**
+	 * Creates a self-deleting script for SSH_ASKPASS. Self-deleting to be able to detect a wrong passphrase. 
+	 */
 	private File createAskpassScript() throws IOException {
+		// TODO: assuming that ssh-add runs the script in shell even on Windows, not cmd
+		// 		 for cmd following could work
+		// 		 suffix = ".bat";
+		// 		 script = "@ECHO %SSH_PASSPHRASE%\nDEL \"" + askpass.getAbsolutePath() + "\"\n";
+		
 		final String suffix;
 		final String script;
-		// TODO: assuming that ssh-add runs the script in shell, not cmd
+
 		suffix = ".sh";
-		script = "#!/bin/sh\necho $SSH_PASSPHRASE\n";
-		// for cmd following should work
-		// suffix = ".bat";
-		// script = "@echo %SSH_PASSPHRASE%\n";
-		
+
 		File askpass = File.createTempFile("askpass_", suffix);
+
+		script = "#!/bin/sh\necho $SSH_PASSPHRASE\nrm " + askpass.getAbsolutePath().replace("\\", "\\\\") + "\n";
+
 		FileWriter askpassWriter = new FileWriter(askpass);
 		askpassWriter.write(script);
 		askpassWriter.close();
