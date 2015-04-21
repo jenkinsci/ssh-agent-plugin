@@ -70,7 +70,7 @@ public class AgentServer {
         socket.bind(address);
         stopped = false;
         POSIXFactory.getPOSIX().chmod(authSocket, 0600);
-        thread = new Thread() {
+        thread = new Thread("SSH Agent thread") {
             public void run() {
                 try {
                     while (!stopped) {
@@ -85,6 +85,7 @@ public class AgentServer {
                 }
             }
         };
+        thread.setDaemon(true);
         thread.start();
         return authSocket;
     }
