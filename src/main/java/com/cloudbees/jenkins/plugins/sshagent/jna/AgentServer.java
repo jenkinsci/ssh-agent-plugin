@@ -90,20 +90,24 @@ public class AgentServer {
     final class AgentSocketAcceptor implements Runnable {
         public void run() {
             try {
-                // The select() will be woke up if some new connection
-                // have occurred, or if the selector has been explicitly
-                // woke up
-                while (selector.select() > 0 && selectable) {
-                    Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+                while (selectable) {
+                    // The select() will be woke up if some new connection
+                    // have occurred, or if the selector has been explicitly
+                    // woke up
+                    if (selector.select() > 0) {
+                        Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
 
-                    while(selectedKeys.hasNext()) {
-                        SelectionKey key = selectedKeys.next();
-                        selectedKeys.remove();
+                        while(selectedKeys.hasNext()) {
+                            SelectionKey key = selectedKeys.next();
+                            selectedKeys.remove();
 
-                        if (key.isValid()) {
-                            EventHandler processor = ((EventHandler) key.attachment());
-                            processor.process(key);
+                            if (key.isValid()) {
+                                EventHandler processor = ((EventHandler) key.attachment());
+                                processor.process(key);
+                            }
                         }
+                    } else {
+                        break;
                     }
                 }
 
