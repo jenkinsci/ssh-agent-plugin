@@ -24,7 +24,10 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.mina;
 
+import org.jenkinsci.remoting.RoleChecker;
+
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
+
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
 import hudson.remoting.Channel;
@@ -33,6 +36,12 @@ import hudson.remoting.Channel;
  * Callable to start the remote agent.
  */
 public class MinaRemoteAgentStarter implements Callable<RemoteAgent, Throwable> {
+
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 2909967505958103050L;
+
     /**
      * Need to pass this through.
      */
@@ -54,5 +63,10 @@ public class MinaRemoteAgentStarter implements Callable<RemoteAgent, Throwable> 
         final MinaRemoteAgent instance = new MinaRemoteAgent(listener);
         final Channel channel = Channel.current();
         return channel == null ? instance : channel.export(RemoteAgent.class, instance);
+    }
+
+    @Override
+    public void checkRoles(RoleChecker arg0) throws SecurityException {
+        // TODO Auto-generated method stub
     }
 }

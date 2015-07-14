@@ -26,11 +26,14 @@ package com.cloudbees.jenkins.plugins.sshagent.mina;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
+
 import org.apache.tomcat.jni.Library;
+import org.jenkinsci.remoting.RoleChecker;
 
 /**
  * A factory that uses the Apache Mina/SSH library support to (semi-)natively provide a ssh-agent implementation
@@ -81,6 +84,11 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
                 listener.getLogger().println("[ssh-agent] Could not find Tomcat Native library");
                 return false;
             }
+        }
+
+        @Override
+        public void checkRoles(RoleChecker arg0) throws SecurityException {
+            // TODO Auto-generated method stub
         }
     }
 }
