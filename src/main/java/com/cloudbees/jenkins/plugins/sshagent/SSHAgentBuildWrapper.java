@@ -23,11 +23,9 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserListBoxModel;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -44,7 +42,6 @@ import hudson.model.Run;
 import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.tasks.BuildWrapperDescriptor;
-import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 
 import org.kohsuke.stapler.DataBoundConstructor;

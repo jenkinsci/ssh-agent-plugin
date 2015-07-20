@@ -24,9 +24,6 @@ import jenkins.tasks.SimpleBuildWrapper.Disposer;
 
 import org.apache.commons.lang.StringUtils;
 
-import com.cloudbees.jenkins.plugins.sshagent.jna.AgentServer;
-import com.cloudbees.jenkins.plugins.sshagent.jna.JNRRemoteAgent;
-import com.cloudbees.jenkins.plugins.sshagent.jna.JNRRemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
