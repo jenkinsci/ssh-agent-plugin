@@ -8,6 +8,8 @@ import hudson.model.Run;
 import hudson.util.Secret;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -22,6 +24,9 @@ import jenkins.tasks.SimpleBuildWrapper.Disposer;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.cloudbees.jenkins.plugins.sshagent.jna.AgentServer;
+import com.cloudbees.jenkins.plugins.sshagent.jna.JNRRemoteAgent;
+import com.cloudbees.jenkins.plugins.sshagent.jna.JNRRemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -40,18 +45,77 @@ public class SSHAgentDisposer extends Disposer {
     private static final long serialVersionUID = -5705766598445563171L;
 
     /**
-     * The proxy for the real remote agent that is on the other side of the
-     * channel (as the agent needs to run on a remote machine)
+     * Listing of credential identifiers.
      */
-    private RemoteAgent agent = null;
+    private List<String> credentialIds = null;
 
     /**
      * 
      */
+    private boolean ignoreMissing = false;
+
+    /**
+     * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
+     * run on a remote machine)
+     */
+    private transient RemoteAgent agent = null;
+
+    /**
+     * Parameterized constructor.
+     */
     public SSHAgentDisposer(Context context, Run<?, ?> build, Launcher launcher, TaskListener listener, List<String> credentialIds,
             boolean ignoreMissing) throws IOException {
+
+        this.credentialIds = credentialIds;
+        this.ignoreMissing = ignoreMissing;
+        initRemoteAgent(context, build, launcher, listener, credentialIds, ignoreMissing);
+    }
+
+    /* (non-Javadoc)
+     * @see jenkins.tasks.SimpleBuildWrapper.Disposer#tearDown(hudson.model.Run, hudson.FilePath, hudson.Launcher, hudson.model.TaskListener)
+     */
+    @Override
+    public void tearDown(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException {
+        if (agent != null) {
+            agent.stop();
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+        }
+    }
+
+    /**
+     * Helper method that returns a safe description of a {@link SSHUser}.
+     *
+     * @param c the credentials.
+     * @return the description.
+     */
+    @NonNull
+    private String description(@NonNull StandardUsernameCredentials c) {
+        String description = Util.fixEmptyAndTrim(c.getDescription());
+        return c.getUsername() + (description != null ? " (" + description + ")" : "");
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        System.out.println("writeObject");
+        out.defaultWriteObject();
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        System.out.println("readObject");
+        in.defaultReadObject();
+        //this.agent = new JNRRemoteAgentFactory().start(launcher, listener);
+    }
+
+    /**
+     * 
+     * @param credentialIds
+     * @param ignoreMissing
+     */
+    private void initRemoteAgent(Context context, Run<?, ?> build, Launcher launcher, TaskListener listener, List<String> credentialIds,
+            boolean ignoreMissing) throws IOException {
+
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
-        for (String id: new LinkedHashSet<String>(credentialIds)) {
+        for (String id : new LinkedHashSet<String>(credentialIds)) {
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(id, SSHUserPrivateKey.class, build);
             if (c == null && !ignoreMissing) {
                 listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
@@ -90,6 +154,7 @@ public class SSHAgentDisposer extends Disposer {
             }
             throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
         }
+
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
             final Secret passphrase = userPrivateKey.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
@@ -99,31 +164,6 @@ public class SSHAgentDisposer extends Disposer {
         }
         context.env("SSH_AUTH_SOCK", agent.getSocket());
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
-
-    }
-
-    /* (non-Javadoc)
-     * @see jenkins.tasks.SimpleBuildWrapper.Disposer#tearDown(hudson.model.Run, hudson.FilePath, hudson.Launcher, hudson.model.TaskListener)
-     */
-    @Override
-    public void tearDown(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
-            throws IOException, InterruptedException {
-        if (agent != null) {
-            agent.stop();
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
-        }
-    }
-
-    /**
-     * Helper method that returns a safe description of a {@link SSHUser}.
-     *
-     * @param c the credentials.
-     * @return the description.
-     */
-    @NonNull
-    private String description(@NonNull StandardUsernameCredentials c) {
-        String description = Util.fixEmptyAndTrim(c.getDescription());
-        return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
 
 }
