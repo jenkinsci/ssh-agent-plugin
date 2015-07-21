@@ -5,6 +5,7 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.model.Run;
+import hudson.security.ACL;
 import hudson.util.Secret;
 
 import java.io.IOException;
