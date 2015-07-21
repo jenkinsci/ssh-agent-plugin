@@ -90,7 +90,7 @@
     <dependency>
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-core</artifactId>
-      <version>0.12.0</version>
+      <version>0.14.0</version>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
@@ -130,7 +130,7 @@
     </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
-    <dependency> <!-- prevent ClassNotFounds during test -->
+    <dependency>
       <groupId>org.jenkins-ci.modules</groupId>
       <artifactId>sshd</artifactId>
       <version>1.6</version>
