@@ -93,17 +93,6 @@ public class SSHAgentDisposer extends Disposer {
         return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
 
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        System.out.println("writeObject");
-        out.defaultWriteObject();
-    }
-
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        System.out.println("readObject");
-        in.defaultReadObject();
-        //this.agent = new JNRRemoteAgentFactory().start(launcher, listener);
-    }
-
     /**
      * 
      * @param credentialIds
