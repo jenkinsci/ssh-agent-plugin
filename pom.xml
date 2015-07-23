@@ -68,7 +68,8 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.findbugs.failure.strict>true</maven.findbugs.failure.strict>
+    <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
+    <findbugs.failOnError>true</findbugs.failOnError>
     <workflow.version>1.8</workflow.version>
   </properties>
 
@@ -142,31 +143,12 @@
       <version>${workflow.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-basic-steps</artifactId>
-      <version>${workflow.version}</version>
-      <scope>test</scope>
-    </dependency> -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-cps</artifactId>
       <version>${workflow.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-durable-task-step</artifactId>
-      <version>${workflow.version}</version>
-      <scope>test</scope>
-    </dependency> -->
-    <!-- <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-step-api</artifactId>
-      <version>${workflow.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency> -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-support</artifactId>
@@ -174,13 +156,12 @@
       <classifier>tests</classifier>
       <scope>test</scope>
      </dependency>
-    <!-- <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-aggregator</artifactId>
-      <version>${workflow.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency> -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+      <version>3.0.0</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -232,10 +213,12 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>3.0.1</version>
+        <version>${findbugs-maven-plugin.version}</version>
         <configuration>
           <excludeFilterFile>src/findbugs/excludesFilter.xml</excludeFilterFile>
-          <failOnError>${maven.findbugs.failure.strict}</failOnError>
+          <failOnError>${findbugs.failOnError}</failOnError>
+          <xmlOutput>true</xmlOutput>
+          <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
         </configuration>
         <executions>
           <execution>
