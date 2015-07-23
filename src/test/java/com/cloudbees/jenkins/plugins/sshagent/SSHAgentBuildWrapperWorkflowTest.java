@@ -9,9 +9,11 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runners.model.Statement;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
@@ -24,6 +26,9 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
 
     @Rule
     public RestartableJenkinsRule story = new RestartableJenkinsRule();
+
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Test
     public void sshAgentAvailable() throws Exception {
@@ -44,7 +49,7 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
                 job.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
-                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
@@ -74,9 +79,9 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
                 p.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
-                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "    semaphore 'sshAgentAvailableAfterRestart'\n"
-                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true));
                 // get the build going
@@ -85,7 +90,6 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
 
                 // wait until the executor gets assigned and the execution pauses
                 SemaphoreStep.waitForStart("sshAgentAvailableAfterRestart/1", b);
-                //e.waitForSuspension();
                 assertTrue(JenkinsRule.getLog(b), b.isBuilding());
             }
         });
@@ -94,17 +98,10 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
             public void evaluate() throws Throwable {
                 WorkflowJob p = story.j.jenkins.getItemByFullName("sshAgentAvailableAfterRestart", WorkflowJob.class);
                 WorkflowRun b = p.getBuildByNumber(1);
-                CpsFlowExecution e = (CpsFlowExecution) b.getExecutionPromise().get();
 
-                // resume from where it left off
                 SemaphoreStep.success("sshAgentAvailableAfterRestart/1", null);
 
-                // wait until the completion
-                while (b.isBuilding()) {
-                    e.waitForSuspension();
-                }
-
-                story.j.assertBuildStatusSuccess(b);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
 
                 stopMockSSHServer();
             }

@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.*;
 import java.security.PublicKey;
 import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPublicKey;
@@ -20,7 +21,7 @@ import java.util.EnumSet;
 
 public class SSHAgentBase {
 
-    public static int SSH_SERVER_PORT = 22999;
+    public static int SSH_SERVER_INITIAL_PORT = 4380;
 
     public static String SSH_SERVER_HOST = "localhost";
 
@@ -28,10 +29,12 @@ public class SSHAgentBase {
 
     private SshServer sshd = null;
 
+    private int assignedPort = SSH_SERVER_INITIAL_PORT;
+
     protected void startMockSSHServer() throws Exception {
         File hostKey = new File(System.getProperty("java.io.tmpdir") + "/key.ser");
         sshd = SshServer.setUpDefaultServer();
-        sshd.setPort(SSH_SERVER_PORT);
+        sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
         sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
         sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKey.getPath()));
@@ -87,7 +90,7 @@ public class SSHAgentBase {
         });
 
         sshd.start();
-        System.out.println("Mock SSH Server is started");
+        System.out.println("Mock SSH Server is started using the port " + getAssignedPort());
     }
 
     protected void stopMockSSHServer() throws InterruptedException {
@@ -167,4 +170,35 @@ public class SSHAgentBase {
     public String getAuthorizedPublicKey() {
         return  "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDB+TU0nnxVKh+m4zV2DhPm8SM5dBWQW2maU2VQp/sKHdgMuGep422eKbNfm9u82kyh1gImJzQVFQaWX+h+SewxiT9Xm7yD4D2RYXuIXgxp5x5WBpQBIHcWgV9v/a+O0cIUnDJYCh5j3O2RT4CpqnrseRrcVoMFSI+sdSAseYC2CKFAIua1x4cUykEH0kE/vkt4WPDJCb7+mIhNpjJEhHW7etsSCcA+vKxux3Kw0TuMNb/o/jL631R7NrU5jo3LzjjgD2FX6wolkYEp9F7YWaXZY4BvopObAGe52aj20Oay7L6uxiFUq/NTOMrT5trJBY3LNOSJuFr+UWGuUSulwj6qR++Io5pTyHjJLaw+s+dXdOArFAeum5bbxhGcLa18eSFYM761wA4KLdVbwd1nXoIG3+wTSO1EQCbArqc7UIhQYKI/WYDpNROdKOTyIpIYXjHz4SZBYXOn9zXJGvgnPpuHoefkT2RB5ryrfr1GFmoV2Bd/i32KIdtiDVqzCZHp9y4ZLlxz3+beMA19dNGbdYgUuanzQuAqeDNK2AcAd0IcnSrmijrxs3oNPbKr1wX2cYdD01m8jhNEn1+JCRAYghI9VsUVeEfuydA942M9gAjIiMGp7L7j09+YaJ0KH3BH8ZVJl20ojjIEa5GkOLo4IK/DMflkgG/qupG2u94o77LaIQ== cloudbees@localhost";
     }
+
+    /**
+     *
+     * @return
+     */
+    private int getValidPort() throws IOException {
+        boolean validPort = false;
+        while (!validPort) {
+            ServerSocket socket = null;
+            try {
+                socket = new ServerSocket(assignedPort, 0, InetAddress.getByName(SSH_SERVER_HOST));
+            } catch (BindException be) {
+                assignedPort++;
+            } finally {
+                if (socket != null) {
+                    socket.close();
+                    validPort = true;
+                }
+            }
+        }
+        return assignedPort;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int getAssignedPort() {
+        return assignedPort;
+    }
+
 }

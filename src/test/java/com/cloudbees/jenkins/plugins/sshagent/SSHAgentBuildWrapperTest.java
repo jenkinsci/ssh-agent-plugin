@@ -37,7 +37,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST);
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertBuildStatusSuccess(job.scheduleBuild2(0));

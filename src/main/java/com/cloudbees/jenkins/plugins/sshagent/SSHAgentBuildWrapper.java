@@ -180,6 +180,14 @@ public class SSHAgentBuildWrapper extends SimpleBuildWrapper {
     }
 
     /**
+      * {@inheritDoc}
+      */
+    @Override
+    protected boolean runPreCheckout() {
+        return true;
+    }
+
+    /**
      * Our descriptor.
      */
     @Extension
