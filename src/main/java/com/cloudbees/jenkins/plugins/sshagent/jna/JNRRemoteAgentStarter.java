@@ -35,7 +35,7 @@ import hudson.remoting.Channel;
 /**
  * Callable to start the remote agent.
  */
-public class JNRRemoteAgentStarter extends MasterToSlaveCallable {
+public class JNRRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
 
     /**
      * 

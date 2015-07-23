@@ -35,7 +35,7 @@ import hudson.remoting.Channel;
 /**
  * Callable to start the remote agent.
  */
-public class MinaRemoteAgentStarter extends MasterToSlaveCallable {
+public class MinaRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
 
     /**
      * 

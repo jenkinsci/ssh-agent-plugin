@@ -32,6 +32,7 @@ import hudson.Launcher;
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
 
+import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 import org.jenkinsci.remoting.RoleChecker;
 
@@ -69,7 +70,7 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
         return launcher.getChannel().call(new MinaRemoteAgentStarter(listener));
     }
 
-    private static class TomcatNativeInstalled implements Callable<Boolean, Throwable> {
+    private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {
         private final TaskListener listener;
 
         public TomcatNativeInstalled(TaskListener listener) {
@@ -84,11 +85,6 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
                 listener.getLogger().println("[ssh-agent] Could not find Tomcat Native library");
                 return false;
             }
-        }
-
-        @Override
-        public void checkRoles(RoleChecker arg0) throws SecurityException {
-            // TODO Auto-generated method stub
         }
     }
 }
