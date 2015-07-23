@@ -9,7 +9,7 @@ import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
-public class SSHAgentSimpleBuildWrapperWorkflowTest {
+public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
 
     public RestartableJenkinsRule story = new RestartableJenkinsRule();
 
@@ -23,9 +23,9 @@ public class SSHAgentSimpleBuildWrapperWorkflowTest {
                 p.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '84822271-02d5-47b8-b8ff-c40fef175c29']], ignoreMissing: false]) {\n"
-                        + "    sh 'ssh -v -l cloudbees 192.168.1.117 uname'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "    semaphore 'sshAgentAvailableAfterRestart'\n"
-                        + "    sh 'ssh -v -l cloudbees 192.168.1.117 uname'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n" , true));
                 // get the build going

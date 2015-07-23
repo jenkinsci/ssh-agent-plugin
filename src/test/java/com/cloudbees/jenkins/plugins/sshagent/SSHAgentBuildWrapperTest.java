@@ -6,6 +6,8 @@ import hudson.tasks.Shell;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -15,10 +17,15 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 
-public class SSHAgentSimpleBuildWrapperTest {
+public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
+
+    @Before
+    public void starting () throws Exception {
+        startMockSSHServer();
+    }
 
     @Test
     public void sshAgentAvailable() throws Exception {
@@ -35,14 +42,19 @@ public class SSHAgentSimpleBuildWrapperTest {
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("ssh -v -l cloudbees 192.168.1.117 uname");
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertBuildStatusSuccess(job.scheduleBuild2(0));
     }
 
+    @After
+    public void finishing () throws InterruptedException {
+        stopMockSSHServer();
+    }
+
     /**
-     * Returns a string with a SSH Private Key with Passphrase.
+     * Returns a string with a Private Key with Passphrase.
      *
      * @return
      */
