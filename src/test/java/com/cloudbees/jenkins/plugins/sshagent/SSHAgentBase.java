@@ -24,6 +24,8 @@ public class SSHAgentBase {
 
     public static String SSH_SERVER_HOST = "localhost";
 
+    public static String CREDENTIAL_ID = "84822271-02d5-47b8-b8ff-c40fef175c29";
+
     private SshServer sshd = null;
 
     protected void startMockSSHServer() throws Exception {

@@ -6,8 +6,6 @@ import hudson.tasks.Shell;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -22,15 +20,12 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
-    @Before
-    public void starting () throws Exception {
-        startMockSSHServer();
-    }
-
     @Test
     public void sshAgentAvailable() throws Exception {
+        startMockSSHServer();
+
         List<String> credentialIds = new ArrayList<String>();
-        credentialIds.add("84822271-02d5-47b8-b8ff-c40fef175c29");
+        credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
                 new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
@@ -46,10 +41,8 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         job.getBuildersList().add(shell);
 
         r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-    }
 
-    @After
-    public void finishing () throws InterruptedException {
         stopMockSSHServer();
     }
+
 }

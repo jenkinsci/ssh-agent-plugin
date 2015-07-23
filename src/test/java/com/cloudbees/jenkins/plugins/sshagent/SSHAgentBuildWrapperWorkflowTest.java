@@ -5,48 +5,111 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assert.assertTrue;
+
 public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
 
     @Rule
-    public JenkinsRule r = new JenkinsRule();
-
-    @Before
-    public void starting () throws Exception {
-        startMockSSHServer();
-        List<String> credentialIds = new ArrayList<String>();
-        credentialIds.add("84822271-02d5-47b8-b8ff-c40fef175c29");
-
-        SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
-                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
-        SystemCredentialsProvider.getInstance().getCredentials().add(key);
-        SystemCredentialsProvider.getInstance().save();
-    }
+    public RestartableJenkinsRule story = new RestartableJenkinsRule();
 
     @Test
     public void sshAgentAvailable() throws Exception {
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '84822271-02d5-47b8-b8ff-c40fef175c29']], ignoreMissing: false]) {\n"
-                + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
-                + "  }\n"
-                + "}\n", true));
-        r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                startMockSSHServer();
+
+                List<String> credentialIds = new ArrayList<String>();
+                credentialIds.add(CREDENTIAL_ID);
+
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node {\n"
+                        + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+                stopMockSSHServer();
+            }
+        });
     }
 
-    @After
-    public void finishing () throws InterruptedException {
-        stopMockSSHServer();
+    @Test
+    public void sshAgentAvailableAfterRestart() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                startMockSSHServer();
+
+                List<String> credentialIds = new ArrayList<String>();
+                credentialIds.add(CREDENTIAL_ID);
+
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailableAfterRestart");
+                p.setDefinition(new CpsFlowDefinition(""
+                        + "node {\n"
+                        + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    semaphore 'sshAgentAvailableAfterRestart'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -p " + SSH_SERVER_PORT + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "  }\n"
+                        + "}\n", true));
+                // get the build going
+                WorkflowRun b = p.scheduleBuild2(0).getStartCondition().get();
+                CpsFlowExecution e = (CpsFlowExecution) b.getExecutionPromise().get();
+
+                // wait until the executor gets assigned and the execution pauses
+                SemaphoreStep.waitForStart("sshAgentAvailableAfterRestart/1", b);
+                //e.waitForSuspension();
+                assertTrue(JenkinsRule.getLog(b), b.isBuilding());
+            }
+        });
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob p = story.j.jenkins.getItemByFullName("sshAgentAvailableAfterRestart", WorkflowJob.class);
+                WorkflowRun b = p.getBuildByNumber(1);
+                CpsFlowExecution e = (CpsFlowExecution) b.getExecutionPromise().get();
+
+                // resume from where it left off
+                SemaphoreStep.success("sshAgentAvailableAfterRestart/1", null);
+
+                // wait until the completion
+                while (b.isBuilding()) {
+                    e.waitForSuspension();
+                }
+
+                story.j.assertBuildStatusSuccess(b);
+
+                stopMockSSHServer();
+            }
+        });
+
     }
 
 }
