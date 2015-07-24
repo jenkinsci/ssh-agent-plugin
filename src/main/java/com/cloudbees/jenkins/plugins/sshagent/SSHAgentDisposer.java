@@ -48,7 +48,7 @@ public class SSHAgentDisposer extends Disposer {
     private List<String> credentialIds = null;
 
     /**
-     * 
+     * Used to ignore credentials that do not exist.
      */
     private boolean ignoreMissing = false;
 

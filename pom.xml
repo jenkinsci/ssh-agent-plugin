@@ -70,7 +70,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
     <findbugs.failOnError>true</findbugs.failOnError>
-    <workflow.version>1.8</workflow.version>
+    <workflow-jenkins-plugin.version>1.8</workflow-jenkins-plugin.version>
   </properties>
 
   <repositories>
@@ -124,6 +124,12 @@
       <version>3.0.0</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-step-api</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+    </dependency>
+
     <!-- plugin dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -146,31 +152,31 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
-      <version>${workflow.version}</version>
+      <version>${workflow-jenkins-plugin.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-basic-steps</artifactId>
-      <version>${workflow.version}</version>
+      <version>${workflow-jenkins-plugin.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-durable-task-step</artifactId>
-      <version>${workflow.version}</version>
+      <version>${workflow-jenkins-plugin.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-cps</artifactId>
-      <version>${workflow.version}</version>
+      <version>${workflow-jenkins-plugin.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-support</artifactId>
-      <version>${workflow.version}</version>
+      <version>${workflow-jenkins-plugin.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
      </dependency>
@@ -197,9 +203,7 @@
                   </requireMavenVersion>
                   <requireMavenVersion>
                     <version>(,3.0),[3.0.4,)</version>
-                    <message>Maven 3.0 through 3.0.3 inclusive do not pass correct settings.xml to Maven Release
-                      Plugin.
-                    </message>
+                    <message>Maven 3.0 through 3.0.3 inclusive do not pass correct settings.xml to Maven Release Plugin</message>
                   </requireMavenVersion>
                 </rules>
               </configuration>
