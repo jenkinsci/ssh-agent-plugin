@@ -48,7 +48,7 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
                 WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
                 job.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
-                        + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
+                        + "  sshagent ([ignoreMissing: false, credentials: ['" + CREDENTIAL_ID + "']]) {\n"
                         + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true)
@@ -78,7 +78,7 @@ public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
                 WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailableAfterRestart");
                 p.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
-                        + "  wrap([$class: 'SSHAgentBuildWrapper', credentialHolders: [[id: '" + CREDENTIAL_ID + "']], ignoreMissing: false]) {\n"
+                        + "  sshagent ([ignoreMissing: false, credentials: ['" + CREDENTIAL_ID + "']]) {\n"
                         + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "    semaphore 'sshAgentAvailableAfterRestart'\n"
                         + "    sh 'ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
