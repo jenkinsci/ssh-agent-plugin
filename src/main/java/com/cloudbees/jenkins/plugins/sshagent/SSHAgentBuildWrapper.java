@@ -32,6 +32,7 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
@@ -47,6 +48,7 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
@@ -307,7 +309,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
-            for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
+            for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());

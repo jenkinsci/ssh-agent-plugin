@@ -120,7 +120,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             this.overrides = new HashMap<String,String>();
             overrides.put("SSH_AUTH_SOCK", socket);
         }
-        @Override public void expand(EnvVars env) throws IOException, InterruptedException {
+        @Override
+        public void expand(EnvVars env) throws IOException, InterruptedException {
             env.overrideAll(overrides);
         }
     }
