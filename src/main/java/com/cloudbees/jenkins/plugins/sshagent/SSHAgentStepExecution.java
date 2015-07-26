@@ -58,8 +58,10 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
-        body = context.newBodyInvoker().withCallback(new Callback()).withDisplayName(null).start();
-        initRemoteAgent();
+        String socket = initRemoteAgent();
+        body = context.newBodyInvoker().
+                withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
+                withCallback(new Callback()).withDisplayName(null).start();
         return false;
     }
 
@@ -108,11 +110,27 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     }
 
+    private static final class ExpanderImpl extends EnvironmentExpander {
+
+        private static final long serialVersionUID = 1;
+
+        private final Map<String,String> overrides;
+
+        private ExpanderImpl(final String socket) {
+            this.overrides = new HashMap<String,String>();
+            overrides.put("SSH_AUTH_SOCK", socket);
+        }
+        @Override public void expand(EnvVars env) throws IOException, InterruptedException {
+            env.overrideAll(overrides);
+        }
+    }
+
     /**
      *
+     * @return
      * @throws IOException
      */
-    private void initRemoteAgent() throws IOException {
+    private String initRemoteAgent() throws IOException {
 
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
         for (String id : new LinkedHashSet<String>(step.getCredentials())) {
@@ -162,8 +180,9 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
                 agent.addIdentity(privateKey, effectivePassphrase, description(userPrivateKey));
             }
         }
-        env.put("SSH_AUTH_SOCK", agent.getSocket());
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
+        return agent.getSocket();
+
     }
 
     /**
