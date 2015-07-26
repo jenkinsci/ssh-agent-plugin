@@ -1,14 +1,10 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.google.inject.Inject;
 import hudson.EnvVars;
-import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
@@ -16,7 +12,6 @@ import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.*;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -33,21 +28,13 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     private transient TaskListener listener;
 
     @StepContextParameter
-    private transient FilePath ws;
-
-    @StepContextParameter
     private transient Run build;
 
     @StepContextParameter
     private transient Launcher launcher;
 
-    @StepContextParameter
-    private transient EnvVars env;
-
     @Inject
     private transient SSHAgentStep step;
-
-    private BodyExecution body;
 
     /**
      * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
@@ -59,7 +46,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     public boolean start() throws Exception {
         StepContext context = getContext();
         String socket = initRemoteAgent();
-        body = context.newBodyInvoker().
+        context.newBodyInvoker().
                 withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
                 withCallback(new Callback()).withDisplayName(null).start();
         return false;
@@ -112,8 +99,14 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     private static final class ExpanderImpl extends EnvironmentExpander {
 
+        /**
+         * Serial Version UID.
+         */
         private static final long serialVersionUID = 1;
 
+        /**
+         * Set of environment variables to overrides (or add).
+         */
         private final Map<String,String> overrides;
 
         private ExpanderImpl(final String socket) {
@@ -127,8 +120,9 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     }
 
     /**
+     * Initializes a SSH Agent.
      *
-     * @return
+     * @return The value that SSH_AUTH_SOCK should be set to.
      * @throws IOException
      */
     private String initRemoteAgent() throws IOException {
@@ -144,7 +138,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             }
         }
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(description(userPrivateKey)));
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(SSHAgentBuildWrapper.description(userPrivateKey)));
         }
 
         listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
@@ -178,7 +172,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             final Secret passphrase = userPrivateKey.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : userPrivateKey.getPrivateKeys()) {
-                agent.addIdentity(privateKey, effectivePassphrase, description(userPrivateKey));
+                agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey));
             }
         }
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
@@ -186,15 +180,4 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     }
 
-    /**
-     * Helper method that returns a safe description of a {@link SSHUser}.
-     *
-     * @param c the credentials.
-     * @return the description.
-     */
-    @Nonnull
-    private String description(@Nonnull StandardUsernameCredentials c) {
-        String description = Util.fixEmptyAndTrim(c.getDescription());
-        return c.getUsername() + (description != null ? " (" + description + ")" : "");
-    }
 }

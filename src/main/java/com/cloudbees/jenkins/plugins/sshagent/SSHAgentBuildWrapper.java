@@ -53,6 +53,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.io.PrintWriter;
@@ -240,8 +241,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param c the credentials.
      * @return the description.
      */
-    @NonNull
-    private static String description(@NonNull StandardUsernameCredentials c) {
+    @Nonnull
+    public static String description(@Nonnull StandardUsernameCredentials c) {
         String description = Util.fixEmptyAndTrim(c.getDescription());
         return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }

@@ -24,13 +24,13 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
     private List<String> credentials;
 
     /**
-     * TODO: Add description.
+     * If a credentials is missed, the SSH Agent is launched anyway.
      */
     @DataBoundSetter
     private boolean ignoreMissing;
 
     /**
-     * TODO: Add description.
+     * Default parameterized constructor.
      *
      * @param credentials
      * @param ignoreMissing
