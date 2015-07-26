@@ -23,43 +23,50 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserListBoxModel;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import hudson.EnvVars;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
 import hudson.model.Descriptor;
-import hudson.model.Run;
+import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.security.ACL;
+import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
+import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
-
+import hudson.util.Secret;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 import java.io.IOException;
 import java.io.ObjectStreamException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-
-import jenkins.tasks.SimpleBuildWrapper;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A build wrapper that provides an SSH agent using supplied credentials
  */
-public class SSHAgentBuildWrapper extends SimpleBuildWrapper {
+public class SSHAgentBuildWrapper extends BuildWrapper {
     /**
      * The {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
      */
@@ -173,18 +180,68 @@ public class SSHAgentBuildWrapper extends SimpleBuildWrapper {
         return result.toArray(new CredentialHolder[result.size()]);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void setUp(Context context, Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener,
-            EnvVars initialEnvironment) throws IOException, InterruptedException {
-        context.setDisposer(new SSHAgentDisposer(context, build, launcher, listener, getCredentialIds() ,ignoreMissing));
+    public void preCheckout(AbstractBuild build, Launcher launcher, BuildListener listener)
+            throws IOException, InterruptedException {
+        build.getEnvironments().add(createSSHAgentEnvironment(build, launcher, listener));
     }
 
     /**
-      * {@inheritDoc}
-      */
+     * {@inheritDoc}
+     */
     @Override
-    protected boolean runPreCheckout() {
-        return true;
+    public Environment setUp(AbstractBuild build, final Launcher launcher, BuildListener listener)
+            throws IOException, InterruptedException {
+        // Jenkins needs this:
+        // null would stop the build, and super implementation throws UnsupportedOperationException
+        return new Environment() {
+        };
+    }
+
+    private Environment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener)
+            throws IOException, InterruptedException {
+        List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
+        for (String id: new LinkedHashSet<String>(getCredentialIds())) {
+            final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(
+                    id,
+                    SSHUserPrivateKey.class,
+                    build
+            );
+            if (c == null && !ignoreMissing) {
+                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
+            }
+            if (c != null && !userPrivateKeys.contains(c)) {
+                userPrivateKeys.add(c);
+            }
+        }
+        for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(description(userPrivateKey)));
+        }
+        try {
+            return new SSHAgentEnvironment(launcher, listener, userPrivateKeys);
+        } catch (IOException e) {
+            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
+        } catch (InterruptedException e) {
+            e.printStackTrace(listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent()));
+            throw e;
+        } catch (Throwable e) {
+            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
+        }
+    }
+
+    /**
+     * Helper method that returns a safe description of a {@link SSHUser}.
+     *
+     * @param c the credentials.
+     * @return the description.
+     */
+    @NonNull
+    private static String description(@NonNull StandardUsernameCredentials c) {
+        String description = Util.fixEmptyAndTrim(c.getDescription());
+        return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
 
     /**
@@ -209,6 +266,102 @@ public class SSHAgentBuildWrapper extends SimpleBuildWrapper {
             return Messages.SSHAgentBuildWrapper_DisplayName();
         }
 
+    }
+
+    /**
+     * The SSH Agent environment.
+     */
+    private class SSHAgentEnvironment extends Environment {
+        /**
+         * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
+         * run on a remote machine)
+         */
+        private final RemoteAgent agent;
+
+        /**
+         * Construct the environment and initialize on the remote node.
+         *
+         * @param launcher          the launcher for the remote node.
+         * @param listener          the listener for reporting progress.
+         * @param sshUserPrivateKey the private key to add to the agent.
+         * @throws Throwable if things go wrong.
+         * @deprecated use {@link #SSHAgentEnvironment(hudson.Launcher, hudson.model.BuildListener, java.util.List)}
+         */
+        @Deprecated
+        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener,
+                                   final SSHUserPrivateKey sshUserPrivateKey) throws Throwable {
+            this(launcher, listener, Collections.singletonList(sshUserPrivateKey));
+        }
+
+        /**
+         * Construct the environment and initialize on the remote node.
+         *
+         * @param launcher           the launcher for the remote node.
+         * @param listener           the listener for reporting progress.
+         * @param sshUserPrivateKeys the private keys to add to the agent.
+         * @throws Throwable if things go wrong.
+         * @since 1.5
+         */
+        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener,
+                                   final List<SSHUserPrivateKey> sshUserPrivateKeys) throws Throwable {
+            RemoteAgent agent = null;
+            listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
+            Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
+            for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
+                if (factory.isSupported(launcher, listener)) {
+                    try {
+                        listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
+                        agent = factory.start(launcher, listener);
+                        break;
+                    } catch (Throwable t) {
+                        faults.put(factory.getDisplayName(), t);
+                    }
+                }
+            }
+            if (agent == null) {
+                listener.getLogger().println("[ssh-agent] FATAL: Could not find a suitable ssh-agent provider");
+                listener.getLogger().println("[ssh-agent] Diagnostic report");
+                for (Map.Entry<String, Throwable> fault : faults.entrySet()) {
+                    listener.getLogger().println("[ssh-agent] * " + fault.getKey());
+                    StringWriter sw = new StringWriter();
+                    fault.getValue().printStackTrace(new PrintWriter(sw));
+                    for (String line : StringUtils.split(sw.toString(), "\n")) {
+                        listener.getLogger().println("[ssh-agent]     " + line);
+                    }
+                }
+                throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
+            }
+            this.agent = agent;
+            for (SSHUserPrivateKey sshUserPrivateKey : sshUserPrivateKeys) {
+                final Secret passphrase = sshUserPrivateKey.getPassphrase();
+                final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
+                for (String privateKey : sshUserPrivateKey.getPrivateKeys()) {
+                    agent.addIdentity(privateKey, effectivePassphrase, description(sshUserPrivateKey));
+                }
+            }
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void buildEnvVars(Map<String, String> env) {
+            env.put("SSH_AUTH_SOCK", agent.getSocket());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean tearDown(AbstractBuild build, BuildListener listener)
+                throws IOException, InterruptedException {
+            if (agent != null) {
+                agent.stop();
+                listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            }
+            return true;
+        }
     }
 
     /**
