@@ -30,11 +30,9 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
 
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
-import org.jenkinsci.remoting.RoleChecker;
 
 /**
  * A factory that uses the Apache Mina/SSH library support to (semi-)natively provide a ssh-agent implementation

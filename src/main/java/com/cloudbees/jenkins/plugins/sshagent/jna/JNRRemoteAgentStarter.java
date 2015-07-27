@@ -25,7 +25,6 @@
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import jenkins.security.MasterToSlaveCallable;
-import org.jenkinsci.remoting.RoleChecker;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 
