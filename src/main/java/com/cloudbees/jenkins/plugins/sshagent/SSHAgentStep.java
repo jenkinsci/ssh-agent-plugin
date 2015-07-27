@@ -11,22 +11,17 @@ import java.util.List;
 
 public class SSHAgentStep extends AbstractStepImpl implements Serializable {
 
-    /**
-     * Serial Version UID.
-     */
     private static final long serialVersionUID = 1641672112447457198L;
 
     /**
      * The {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s of the credentials
      * to use.
      */
-    @DataBoundSetter
     private List<String> credentials;
 
     /**
      * If a credentials is missed, the SSH Agent is launched anyway.
      */
-    @DataBoundSetter
     private boolean ignoreMissing;
 
     /**
@@ -65,6 +60,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
 
     }
 
+    @DataBoundSetter
     public void setIgnoreMissing(final boolean ignoreMissing) {
         this.ignoreMissing = ignoreMissing;
     }
@@ -73,6 +69,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
         return ignoreMissing;
     }
 
+    @DataBoundSetter
     public void setCredentials(final List<String> credentials) {
         this.credentials = credentials;
     }

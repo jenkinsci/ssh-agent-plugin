@@ -12,6 +12,7 @@ import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.*;
 
+import javax.annotation.CheckReturnValue;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -19,9 +20,6 @@ import java.util.*;
 
 public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
-    /**
-     * Serial Version UID.
-     */
     private static final long serialVersionUID = -1912198498615126332L;
 
     @StepContextParameter
@@ -64,58 +62,71 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     public void onResume() {
         super.onResume();
         try {
-            initRemoteAgent();
-        } catch (Exception e) {
+            StepContext context = getContext();
+            String socket = initRemoteAgent();
+            context.newBodyInvoker().
+                    withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
+                    withCallback(new Callback()).withDisplayName(null).start();
+
+        } catch (IOException io) {
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
+        } catch (InterruptedException ie) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
         }
     }
 
-    private class Callback extends BodyExecutionCallback {
+    private static class Callback extends BodyExecutionCallback {
 
-        /**
-         * Serial Version UID.
-         */
         private static final long serialVersionUID = 4118096102821683615L;
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            if (agent != null) {
-                agent.stop();
-                listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            try {
+                TaskListener listener = context.get(TaskListener.class);
+                RemoteAgent agent = context.get(RemoteAgent.class);
+                if (agent != null) {
+                    agent.stop();
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+                }
+                context.onSuccess(result);
+            } catch (Throwable th) {
+                context.onFailure(th);
             }
-            getContext().onSuccess(result);
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            if (agent != null) {
-                agent.stop();
-                listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            try {
+                TaskListener listener = context.get(TaskListener.class);
+                RemoteAgent agent = context.get(RemoteAgent.class);
+                if (agent != null) {
+                    agent.stop();
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+                }
+                context.onFailure(t);
+            } catch (Throwable th) {
+                context.onFailure(th);
             }
-            getContext().onFailure(t);
         }
 
     }
 
     private static final class ExpanderImpl extends EnvironmentExpander {
 
-        /**
-         * Serial Version UID.
-         */
-        private static final long serialVersionUID = 1;
+        private static final long serialVersionUID = 1267620262525665964L;
 
         /**
-         * Set of environment variables to overrides (or add).
+         * Value for SSH_AUTH_SOCK environment variable.
          */
-        private final Map<String,String> overrides;
+        private final String socket;
 
         private ExpanderImpl(final String socket) {
-            this.overrides = new HashMap<String,String>();
-            overrides.put("SSH_AUTH_SOCK", socket);
+            this.socket = socket;
         }
+
         @Override
         public void expand(EnvVars env) throws IOException, InterruptedException {
-            env.overrideAll(overrides);
+            env.override("SSH_AUTH_SOCK", socket);
         }
     }
 
@@ -125,6 +136,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      * @return The value that SSH_AUTH_SOCK should be set to.
      * @throws IOException
      */
+    @CheckReturnValue
     private String initRemoteAgent() throws IOException {
 
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
