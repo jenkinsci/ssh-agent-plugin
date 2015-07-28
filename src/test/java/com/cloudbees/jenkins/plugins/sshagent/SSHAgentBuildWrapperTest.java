@@ -1,13 +1,16 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
 import hudson.model.FreeStyleProject;
+import hudson.model.Result;
 import hudson.tasks.Shell;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
@@ -19,6 +22,9 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
+
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Test
     public void sshAgentAvailable() throws Exception {
@@ -32,7 +38,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 
-        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "p");
+        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentAvailable");
 
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
@@ -45,4 +51,47 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         stopMockSSHServer();
     }
 
+    @Test
+    public void sshAgentUnavailable() throws Exception {
+        startMockSSHServer();
+
+        List<String> credentialIds = new ArrayList<String>();
+        credentialIds.add(CREDENTIAL_ID);
+
+        SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+        SystemCredentialsProvider.getInstance().getCredentials().add(key);
+        SystemCredentialsProvider.getInstance().save();
+
+        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentUnavailable");
+
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        job.getBuildersList().add(shell);
+
+        r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
+
+        stopMockSSHServer();
+    }
+
+    @Test
+    public void sshAgentWithInvalidCredentials() throws Exception {
+        startMockSSHServer();
+
+        List<String> credentialIds = new ArrayList<String>();
+        credentialIds.add(CREDENTIAL_ID);
+
+        SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "BAD-passphrase-cloudbees", "test");
+        SystemCredentialsProvider.getInstance().getCredentials().add(key);
+        SystemCredentialsProvider.getInstance().save();
+
+        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentWithInvalidCredentials");
+
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        job.getBuildersList().add(shell);
+
+        r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
+
+        stopMockSSHServer();
+    }
 }
