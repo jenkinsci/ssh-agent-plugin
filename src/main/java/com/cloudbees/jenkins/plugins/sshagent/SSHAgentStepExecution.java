@@ -44,9 +44,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     public boolean start() throws Exception {
         StepContext context = getContext();
         String socket = initRemoteAgent();
+        // TODO: Remove this message. It's temporal.
+        System.out.println("A SSH Agent is started using this socket " + socket);
         context.newBodyInvoker().
                 withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
-                withCallback(new Callback()).withDisplayName(null).start();
+                withCallback(new Callback(agent)).withDisplayName(null).start();
         return false;
     }
 
@@ -66,7 +68,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             String socket = initRemoteAgent();
             context.newBodyInvoker().
                     withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
-                    withCallback(new Callback()).withDisplayName(null).start();
+                    withCallback(new Callback(agent)).withDisplayName(null).start();
 
         } catch (IOException io) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
@@ -79,34 +81,35 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         private static final long serialVersionUID = 4118096102821683615L;
 
+        private transient RemoteAgent agent = null;
+
+        Callback (final RemoteAgent agent) {
+            this.agent = agent;
+        }
+
         @Override
         public void onSuccess(StepContext context, Object result) {
-            try {
-                TaskListener listener = context.get(TaskListener.class);
-                RemoteAgent agent = context.get(RemoteAgent.class);
-                if (agent != null) {
-                    agent.stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
-                }
-                context.onSuccess(result);
-            } catch (Throwable th) {
-                context.onFailure(th);
+            //TaskListener listener = context.get(TaskListener.class);
+            if (agent != null) {
+                String socket = agent.getSocket();
+                agent.stop();
+                // TODO: Remove this message. It's temporal.
+                System.out.println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                //listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
+            context.onSuccess(result);
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            try {
-                TaskListener listener = context.get(TaskListener.class);
-                RemoteAgent agent = context.get(RemoteAgent.class);
-                if (agent != null) {
-                    agent.stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
-                }
-                context.onFailure(t);
-            } catch (Throwable th) {
-                context.onFailure(th);
+            if (agent != null) {
+                String socket = agent.getSocket();
+                agent.stop();
+                // TODO: Remove this message. It's temporal.
+                System.out.println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                //listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
+            context.onFailure(t);
         }
 
     }
@@ -187,7 +190,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
                 agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey));
             }
         }
-        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
+        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started() + " Socket: " + agent.getSocket());
         return agent.getSocket();
 
     }

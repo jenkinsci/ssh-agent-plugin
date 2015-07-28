@@ -22,7 +22,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertTrue;
 
-public class SSHAgentBuildWrapperWorkflowTest extends SSHAgentBase {
+public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
     @Rule
     public RestartableJenkinsRule story = new RestartableJenkinsRule();
