@@ -20,7 +20,7 @@ import java.util.*;
 
 public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
-    private static final long serialVersionUID = -1912198498615126332L;
+    private static final long serialVersionUID = 1L;
 
     @StepContextParameter
     private transient TaskListener listener;
@@ -31,8 +31,13 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @StepContextParameter
     private transient Launcher launcher;
 
-    @Inject
-    private transient SSHAgentStep step;
+    @Inject(optional = true)
+    private SSHAgentStep step;
+
+    /**
+     * Value for SSH_AUTH_SOCK environment variable.
+     */
+    private String socket;
 
     /**
      * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
@@ -43,11 +48,9 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
-        String socket = initRemoteAgent();
-        // TODO: Remove this message. It's temporal.
-        System.out.println("A SSH Agent is started using this socket " + socket);
+        initRemoteAgent();
         context.newBodyInvoker().
-                withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
+                withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(this))).
                 withCallback(new Callback(agent)).withDisplayName(null).start();
         return false;
     }
@@ -64,22 +67,15 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     public void onResume() {
         super.onResume();
         try {
-            StepContext context = getContext();
-            String socket = initRemoteAgent();
-            context.newBodyInvoker().
-                    withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(socket))).
-                    withCallback(new Callback(agent)).withDisplayName(null).start();
-
+            initRemoteAgent();
         } catch (IOException io) {
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
-        } catch (InterruptedException ie) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
         }
     }
 
     private static class Callback extends BodyExecutionCallback {
 
-        private static final long serialVersionUID = 4118096102821683615L;
+        private static final long serialVersionUID = 1L;
 
         private transient RemoteAgent agent = null;
 
@@ -89,25 +85,30 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            //TaskListener listener = context.get(TaskListener.class);
-            if (agent != null) {
-                String socket = agent.getSocket();
-                agent.stop();
-                // TODO: Remove this message. It's temporal.
-                System.out.println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
-                //listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            try {
+                TaskListener listener = context.get(TaskListener.class);
+                if (agent != null) {
+                    String socket = agent.getSocket();
+                    agent.stop();
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                }
+            } catch (Throwable th) {
+                context.onFailure(th);
             }
             context.onSuccess(result);
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            if (agent != null) {
-                String socket = agent.getSocket();
-                agent.stop();
-                // TODO: Remove this message. It's temporal.
-                System.out.println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
-                //listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            try {
+                TaskListener listener = context.get(TaskListener.class);
+                if (agent != null) {
+                    String socket = agent.getSocket();
+                    agent.stop();
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                }
+            } catch (Throwable th) {
+                context.onFailure(th);
             }
             context.onFailure(t);
         }
@@ -116,31 +117,26 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     private static final class ExpanderImpl extends EnvironmentExpander {
 
-        private static final long serialVersionUID = 1267620262525665964L;
+        private static final long serialVersionUID = 1L;
 
-        /**
-         * Value for SSH_AUTH_SOCK environment variable.
-         */
-        private final String socket;
+        private final SSHAgentStepExecution execution;
 
-        private ExpanderImpl(final String socket) {
-            this.socket = socket;
+        ExpanderImpl(SSHAgentStepExecution execution) {
+            this.execution = execution;
         }
 
         @Override
         public void expand(EnvVars env) throws IOException, InterruptedException {
-            env.override("SSH_AUTH_SOCK", socket);
+            env.override("SSH_AUTH_SOCK", execution.getSocket());
         }
     }
 
     /**
      * Initializes a SSH Agent.
      *
-     * @return The value that SSH_AUTH_SOCK should be set to.
      * @throws IOException
      */
-    @CheckReturnValue
-    private String initRemoteAgent() throws IOException {
+    private void initRemoteAgent() throws IOException {
 
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
         for (String id : new LinkedHashSet<String>(step.getCredentials())) {
@@ -190,9 +186,17 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
                 agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey));
             }
         }
-        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started() + " Socket: " + agent.getSocket());
-        return agent.getSocket();
 
+        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started() + " Socket: " + agent.getSocket());
+        socket = agent.getSocket();
     }
 
+    /**
+     * Returns the socket.
+     *
+     * @return The value that SSH_AUTH_SOCK should be set to.
+     */
+    @CheckReturnValue private String getSocket() {
+        return socket;
+    }
 }

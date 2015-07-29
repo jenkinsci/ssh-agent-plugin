@@ -11,7 +11,7 @@ import java.util.List;
 
 public class SSHAgentStep extends AbstractStepImpl implements Serializable {
 
-    private static final long serialVersionUID = 1641672112447457198L;
+    private static final long serialVersionUID = 1L;
 
     /**
      * The {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s of the credentials
