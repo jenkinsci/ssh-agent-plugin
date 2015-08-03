@@ -28,12 +28,11 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
      * Default parameterized constructor.
      *
      * @param credentials
-     * @param ignoreMissing
      */
     @DataBoundConstructor
-    public SSHAgentStep(final List<String> credentials, final boolean ignoreMissing) {
+    public SSHAgentStep(final List<String> credentials) {
         this.credentials = credentials;
-        this.ignoreMissing = ignoreMissing;
+        this.ignoreMissing = false;
     }
 
     @Extension
@@ -69,7 +68,6 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
         return ignoreMissing;
     }
 
-    @DataBoundSetter
     public void setCredentials(final List<String> credentials) {
         this.credentials = credentials;
     }

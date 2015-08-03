@@ -41,7 +41,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     private String socket;
 
     /**
-     * TODO: Add description.
+     * Listing of socket files created. Will be used by {@link #purgeSockets()} and {@link #initRemoteAgent()}
      */
     private List<String> sockets;
 
@@ -86,7 +86,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         private static final long serialVersionUID = 1L;
 
-        private SSHAgentStepExecution execution;
+        private final SSHAgentStepExecution execution;
 
         Callback (SSHAgentStepExecution execution) {
             this.execution = execution;
@@ -97,9 +97,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             try {
                 TaskListener listener = context.get(TaskListener.class);
                 if (execution.getSSHAgent() != null) {
-                    String socket = execution.getSSHAgent().getSocket();
                     execution.getSSHAgent().stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
                 }
             } catch (Throwable th) {
                 context.onFailure(th);
@@ -113,9 +112,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             try {
                 TaskListener listener = context.get(TaskListener.class);
                 if (execution.getSSHAgent() != null) {
-                    String socket = execution.getSSHAgent().getSocket();
                     execution.getSSHAgent().stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
+                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
                 }
             } catch (Throwable th) {
                 context.onFailure(th);
@@ -198,7 +196,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             }
         }
 
-        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started() + " Socket: " + agent.getSocket());
+        listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         socket = agent.getSocket();
         sockets.add(socket);
     }
@@ -208,19 +206,15 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      * Especially useful when Jenkins is restarted during the execution of this step.
      */
     public void purgeSockets() {
-        List<String> result = new ArrayList<String>();
-        for (int i = 0; i < sockets.size(); i++) {
-            File socket = new File(sockets.get(i));
+        Iterator<String> it = sockets.iterator();
+        while (it.hasNext()) {
+            File socket = new File(it.next());
             if (socket.exists()) {
                 if (!socket.delete()) {
                     listener.getLogger().format("It was a problem removing this socket file %s", socket.getAbsolutePath());
-                    result.add(sockets.get(i));
                 }
             }
-        }
-        sockets.clear();
-        if (result.size() > 0) {
-            sockets.addAll(result);
+            it.remove();
         }
     }
 

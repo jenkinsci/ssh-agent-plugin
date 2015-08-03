@@ -38,7 +38,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 
-        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentAvailable");
+        FreeStyleProject job = r.createFreeStyleProject();
 
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
@@ -63,7 +63,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 
-        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentUnavailable");
+        FreeStyleProject job = r.createFreeStyleProject();
 
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
@@ -85,7 +85,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 
-        FreeStyleProject job = r.jenkins.createProject(FreeStyleProject.class, "sshAgentWithInvalidCredentials");
+        FreeStyleProject job = r.createFreeStyleProject();
 
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
