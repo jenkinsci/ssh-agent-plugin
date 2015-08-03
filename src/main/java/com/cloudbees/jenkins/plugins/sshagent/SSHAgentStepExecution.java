@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.*;
 
 import javax.annotation.CheckReturnValue;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -40,6 +41,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     private String socket;
 
     /**
+     * TODO: Add description.
+     */
+    private List<String> sockets;
+
+    /**
      * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
      * run on a remote machine)
      */
@@ -48,10 +54,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
+        sockets = new ArrayList<String>();
         initRemoteAgent();
         context.newBodyInvoker().
                 withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(this))).
-                withCallback(new Callback(agent)).withDisplayName(null).start();
+                withCallback(new Callback(this)).withDisplayName(null).start();
         return false;
     }
 
@@ -61,12 +68,14 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             agent.stop();
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
         }
+        purgeSockets();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         try {
+            purgeSockets();
             initRemoteAgent();
         } catch (IOException io) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
@@ -77,24 +86,25 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         private static final long serialVersionUID = 1L;
 
-        private transient RemoteAgent agent = null;
+        private SSHAgentStepExecution execution;
 
-        Callback (final RemoteAgent agent) {
-            this.agent = agent;
+        Callback (SSHAgentStepExecution execution) {
+            this.execution = execution;
         }
 
         @Override
         public void onSuccess(StepContext context, Object result) {
             try {
                 TaskListener listener = context.get(TaskListener.class);
-                if (agent != null) {
-                    String socket = agent.getSocket();
-                    agent.stop();
+                if (execution.getSSHAgent() != null) {
+                    String socket = execution.getSSHAgent().getSocket();
+                    execution.getSSHAgent().stop();
                     listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
                 }
             } catch (Throwable th) {
                 context.onFailure(th);
             }
+            execution.purgeSockets();
             context.onSuccess(result);
         }
 
@@ -102,14 +112,15 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         public void onFailure(StepContext context, Throwable t) {
             try {
                 TaskListener listener = context.get(TaskListener.class);
-                if (agent != null) {
-                    String socket = agent.getSocket();
-                    agent.stop();
+                if (execution.getSSHAgent() != null) {
+                    String socket = execution.getSSHAgent().getSocket();
+                    execution.getSSHAgent().stop();
                     listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped() + " Socket: " + socket);
                 }
             } catch (Throwable th) {
                 context.onFailure(th);
             }
+            execution.purgeSockets();
             context.onFailure(t);
         }
 
@@ -189,6 +200,28 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started() + " Socket: " + agent.getSocket());
         socket = agent.getSocket();
+        sockets.add(socket);
+    }
+
+    /**
+     * Purges all socket files created previously.
+     * Especially useful when Jenkins is restarted during the execution of this step.
+     */
+    public void purgeSockets() {
+        List<String> result = new ArrayList<String>();
+        for (int i = 0; i < sockets.size(); i++) {
+            File socket = new File(sockets.get(i));
+            if (socket.exists()) {
+                if (!socket.delete()) {
+                    listener.getLogger().format("It was a problem removing this socket file %s", socket.getAbsolutePath());
+                    result.add(sockets.get(i));
+                }
+            }
+        }
+        sockets.clear();
+        if (result.size() > 0) {
+            sockets.addAll(result);
+        }
     }
 
     /**
@@ -198,5 +231,14 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      */
     @CheckReturnValue private String getSocket() {
         return socket;
+    }
+
+    /**
+     * Returns the SSH Agent.
+     *
+     * @return The SSH Agent available in this execution.
+     */
+    public RemoteAgent getSSHAgent() {
+        return agent;
     }
 }
