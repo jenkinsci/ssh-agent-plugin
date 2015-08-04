@@ -1,6 +1,6 @@
 <pre><code>
 node {
-  sshagent ([ignoreMissing: false, credentials: ['14714940-3b66-48f1-bf60-7ec8ec7c5581']]) {
+  sshagent (credentials: ['14714940-3b66-48f1-bf60-7ec8ec7c5581']) {
     sh 'ssh -o StrictHostKeyChecking=no -l cloudbees 192.168.1.106 uname -a'
   }
 }
