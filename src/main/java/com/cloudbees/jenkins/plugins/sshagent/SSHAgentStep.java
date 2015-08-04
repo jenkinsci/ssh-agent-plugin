@@ -21,6 +21,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
 
     /**
      * If a credentials is missed, the SSH Agent is launched anyway.
+     * By the fault is false. Initialized in the constructor.
      */
     private boolean ignoreMissing;
 

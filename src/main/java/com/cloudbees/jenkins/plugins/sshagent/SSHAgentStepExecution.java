@@ -27,7 +27,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     private transient TaskListener listener;
 
     @StepContextParameter
-    private transient Run build;
+    private transient Run<?, ?> build;
 
     @StepContextParameter
     private transient Launcher launcher;
@@ -94,21 +94,20 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            try {
-                TaskListener listener = context.get(TaskListener.class);
-                if (execution.getSSHAgent() != null) {
-                    execution.getSSHAgent().stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
-                }
-            } catch (Throwable th) {
-                context.onFailure(th);
-            }
-            execution.purgeSockets();
+            cleanUp(context);
             context.onSuccess(result);
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
+            cleanUp(context);
+            context.onFailure(t);
+        }
+
+        /**
+         * Shuts down the current SSH Agent and purges socket files.
+         */
+        private void cleanUp(StepContext context) {
             try {
                 TaskListener listener = context.get(TaskListener.class);
                 if (execution.getSSHAgent() != null) {
@@ -119,9 +118,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
                 context.onFailure(th);
             }
             execution.purgeSockets();
-            context.onFailure(t);
         }
-
     }
 
     private static final class ExpanderImpl extends EnvironmentExpander {
