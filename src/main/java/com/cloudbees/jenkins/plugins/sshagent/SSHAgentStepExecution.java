@@ -94,31 +94,16 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
         @Override
         public void onSuccess(StepContext context, Object result) {
-            cleanUp(context);
+            execution.cleanUp();
             context.onSuccess(result);
         }
 
         @Override
         public void onFailure(StepContext context, Throwable t) {
-            cleanUp(context);
+            execution.cleanUp();
             context.onFailure(t);
         }
 
-        /**
-         * Shuts down the current SSH Agent and purges socket files.
-         */
-        private void cleanUp(StepContext context) {
-            try {
-                TaskListener listener = context.get(TaskListener.class);
-                if (execution.getSSHAgent() != null) {
-                    execution.getSSHAgent().stop();
-                    listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
-                }
-            } catch (Throwable th) {
-                context.onFailure(th);
-            }
-            execution.purgeSockets();
-        }
     }
 
     private static final class ExpanderImpl extends EnvironmentExpander {
@@ -199,10 +184,26 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     }
 
     /**
+     * Shuts down the current SSH Agent and purges socket files.
+     */
+    private void cleanUp() {
+        try {
+            TaskListener listener = getContext().get(TaskListener.class);
+            if (agent != null) {
+                agent.stop();
+                listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            }
+        } catch (Throwable th) {
+            getContext().onFailure(th);
+        }
+        purgeSockets();
+    }
+
+    /**
      * Purges all socket files created previously.
      * Especially useful when Jenkins is restarted during the execution of this step.
      */
-    public void purgeSockets() {
+    private void purgeSockets() {
         Iterator<String> it = sockets.iterator();
         while (it.hasNext()) {
             File socket = new File(it.next());
@@ -224,12 +225,4 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         return socket;
     }
 
-    /**
-     * Returns the SSH Agent.
-     *
-     * @return The SSH Agent available in this execution.
-     */
-    public RemoteAgent getSSHAgent() {
-        return agent;
-    }
 }
