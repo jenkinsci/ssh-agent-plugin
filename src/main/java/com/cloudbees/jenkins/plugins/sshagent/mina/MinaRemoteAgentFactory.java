@@ -26,10 +26,12 @@ package com.cloudbees.jenkins.plugins.sshagent.mina;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
+
+import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 
 /**
@@ -66,7 +68,14 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
         return launcher.getChannel().call(new MinaRemoteAgentStarter(listener));
     }
 
-    private static class TomcatNativeInstalled implements Callable<Boolean, Throwable> {
+    private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {
+
+        /**
+         * Ensure consistent serialization. Value generated from the 1.7 release.
+         * @since 1.8
+         */
+        private static final long serialVersionUID = 3234893369850673438L;
+
         private final TaskListener listener;
 
         public TomcatNativeInstalled(TaskListener listener) {

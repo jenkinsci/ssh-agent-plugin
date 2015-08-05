@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.532.2</version>
+    <version>1.609.1</version>
   </parent>
 
   <artifactId>ssh-agent</artifactId>
@@ -70,6 +70,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
     <findbugs.failOnError>true</findbugs.failOnError>
+    <workflow-jenkins-plugin.version>1.9-beta-2-SNAPSHOT</workflow-jenkins-plugin.version>
   </properties>
 
   <repositories>
@@ -90,7 +91,7 @@
     <dependency>
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-core</artifactId>
-      <version>0.12.0</version>
+      <version>0.14.0</version>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
@@ -117,6 +118,18 @@
       <artifactId>jnr-unixsocket-nodep</artifactId>
       <version>0.3.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+      <version>3.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-step-api</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+    </dependency>
+
     <!-- plugin dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -131,17 +144,42 @@
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.10</version>
+      <groupId>org.jenkins-ci.modules</groupId>
+      <artifactId>sshd</artifactId>
+      <version>1.6</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-      <version>3.0.0</version>
-      <scope>provided</scope>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-job</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+      <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-basic-steps</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-durable-task-step</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-cps</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-support</artifactId>
+      <version>${workflow-jenkins-plugin.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+     </dependency>
   </dependencies>
 
   <build>
@@ -165,9 +203,7 @@
                   </requireMavenVersion>
                   <requireMavenVersion>
                     <version>(,3.0),[3.0.4,)</version>
-                    <message>Maven 3.0 through 3.0.3 inclusive do not pass correct settings.xml to Maven Release
-                      Plugin.
-                    </message>
+                    <message>Maven 3.0 through 3.0.3 inclusive do not pass correct settings.xml to Maven Release Plugin</message>
                   </requireMavenVersion>
                 </rules>
               </configuration>

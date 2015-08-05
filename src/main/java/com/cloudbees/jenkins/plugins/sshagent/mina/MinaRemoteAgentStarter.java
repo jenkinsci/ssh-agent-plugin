@@ -24,15 +24,24 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.mina;
 
+import jenkins.security.MasterToSlaveCallable;
+
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
+
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
 import hudson.remoting.Channel;
 
 /**
  * Callable to start the remote agent.
  */
-public class MinaRemoteAgentStarter implements Callable<RemoteAgent, Throwable> {
+public class MinaRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
+
+    /**
+     * Ensure consistent serialization. Value generated from the 1.7 release.
+     * @since 1.8
+     */
+    private static final long serialVersionUID = -3757105406876098311L;
+
     /**
      * Need to pass this through.
      */
@@ -55,4 +64,5 @@ public class MinaRemoteAgentStarter implements Callable<RemoteAgent, Throwable> 
         final Channel channel = Channel.current();
         return channel == null ? instance : channel.export(RemoteAgent.class, instance);
     }
+
 }

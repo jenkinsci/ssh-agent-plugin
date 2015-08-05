@@ -1,0 +1,8 @@
+<pre><code>
+node {
+  sshagent (credentials: ['deploy-dev']) {
+    sh 'ssh -o StrictHostKeyChecking=no -l cloudbees 192.168.1.106 uname -a'
+  }
+}
+</code></pre>
+<p>Multiple credentials could be passed in the array but it is not supported using Snippet Generator.</p>

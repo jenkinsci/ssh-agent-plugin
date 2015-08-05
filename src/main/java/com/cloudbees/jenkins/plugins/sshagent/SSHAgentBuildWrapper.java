@@ -39,7 +39,6 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.tasks.BuildWrapper;
@@ -47,10 +46,12 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.io.PrintWriter;
@@ -61,7 +62,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * A build wrapper that provides an SSH agent using supplied credentials
@@ -238,8 +238,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param c the credentials.
      * @return the description.
      */
-    @NonNull
-    private static String description(@NonNull StandardUsernameCredentials c) {
+    @Nonnull
+    public static String description(@Nonnull StandardUsernameCredentials c) {
         String description = Util.fixEmptyAndTrim(c.getDescription());
         return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
@@ -307,7 +307,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
-            for (RemoteAgentFactory factory : Hudson.getInstance().getExtensionList(RemoteAgentFactory.class)) {
+            for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
