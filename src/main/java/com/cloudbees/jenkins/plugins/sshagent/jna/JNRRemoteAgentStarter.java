@@ -36,10 +36,7 @@ import hudson.remoting.Channel;
  */
 public class JNRRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -8381290066841681157L;
+    private static final long serialVersionUID = 5020446864184061252L;
 
     /**
      * Need to pass this through.
