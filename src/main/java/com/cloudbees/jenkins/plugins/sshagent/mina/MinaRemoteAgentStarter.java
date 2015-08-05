@@ -36,6 +36,10 @@ import hudson.remoting.Channel;
  */
 public class MinaRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
 
+    /**
+     * Ensure consistent serialization. Value generated from the 1.7 release.
+     * @since 1.8
+     */
     private static final long serialVersionUID = -3757105406876098311L;
 
     /**

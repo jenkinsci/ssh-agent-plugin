@@ -70,6 +70,10 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
 
     private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {
 
+        /**
+         * Ensure consistent serialization. Value generated from the 1.7 release.
+         * @since 1.8
+         */
         private static final long serialVersionUID = 3234893369850673438L;
 
         private final TaskListener listener;
