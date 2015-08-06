@@ -70,7 +70,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
     <findbugs.failOnError>true</findbugs.failOnError>
-    <workflow-jenkins-plugin.version>1.9-beta-2-SNAPSHOT</workflow-jenkins-plugin.version>
+    <workflow-jenkins-plugin.version>1.9</workflow-jenkins-plugin.version>
   </properties>
 
   <repositories>
