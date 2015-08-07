@@ -33,7 +33,7 @@
   </parent>
 
   <artifactId>ssh-agent</artifactId>
-  <version>1.8-SNAPSHOT</version>
+  <version>1.8</version>
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
@@ -61,7 +61,7 @@
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/ssh-agent-plugin</url>
-    <tag>HEAD</tag>
+    <tag>ssh-agent-1.8</tag>
   </scm>
 
   <properties>
