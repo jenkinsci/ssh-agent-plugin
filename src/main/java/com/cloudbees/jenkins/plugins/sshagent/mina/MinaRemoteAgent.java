@@ -29,8 +29,11 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
 import org.apache.sshd.agent.unix.AgentServer;
 import org.apache.sshd.common.util.SecurityUtils;
-import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.openssl.PasswordFinder;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
+import org.bouncycastle.openssl.PEMParser;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -83,22 +86,27 @@ public class MinaRemoteAgent implements RemoteAgent {
             }
         }
         try {
-            PEMReader r = new PEMReader(new StringReader(privateKey),
-                    passphrase == null ? null : new PasswordFinder() {
-                        public char[] getPassword() {
-                            return passphrase.toCharArray();
-                        }
-                    });
+            PEMParser r = new PEMParser(new StringReader(privateKey));
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
+            PEMDecryptorProvider decryptionProv = new JcePEMDecryptorProviderBuilder().build(
+                passphrase == null ? null : passphrase.toCharArray());
             try {
                 Object o = r.readObject();
-                if (o instanceof KeyPair) {
-                    agent.getAgent().addIdentity((KeyPair) o, comment);
+                KeyPair keyPair = null;
+
+                if (o instanceof PEMEncryptedKeyPair) {
+                    keyPair = converter.getKeyPair(
+                        ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
+                } else if (o instanceof KeyPair) {
+                    keyPair = ((KeyPair) o);
                 }
+                agent.getAgent().addIdentity(keyPair, comment);
             } finally {
                 r.close();
             }
         } catch (Exception e) {
             e.printStackTrace(listener.error(Messages.SSHAgentBuildWrapper_UnableToReadKey(e.getMessage())));
+            e.printStackTrace(listener.getLogger());
         }
     }
 
