@@ -80,6 +80,12 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     private final List<String> credentialIds;
 
+    /**
+     * When {@code true} then any missing credentials will be ignored. When {@code false} then the build will be failed
+     * if any of the required credentials cannot be resolved.
+     *
+     * @since 1.5
+     */
     private final boolean ignoreMissing;
 
     /**
@@ -98,7 +104,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * Constructs a new instance.
      *
      * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
-     * @param ignoreMissing
+     * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @since 1.5
      */
     @DataBoundConstructor
@@ -112,6 +118,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      *
      * @param credentialIds the {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s
      *                      of the credentials to use.
+     * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @since 1.5
      */
     @SuppressWarnings("unused") // used via stapler
