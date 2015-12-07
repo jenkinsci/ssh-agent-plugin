@@ -4,15 +4,16 @@ import com.trilead.ssh2.crypto.Base64;
 import com.trilead.ssh2.packets.TypesWriter;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.apache.commons.io.IOUtils;
-import org.apache.sshd.SshServer;
+import org.apache.sshd.server.SshServer;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.CommandFactory;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
-import org.apache.sshd.server.PublickeyAuthenticator;
+import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.command.UnknownCommand;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
@@ -32,7 +33,7 @@ import java.util.EnumSet;
 
 public class SSHAgentBase {
 
-    public static int SSH_SERVER_INITIAL_PORT = 4380;
+    public static AtomicInteger SSH_SERVER_INITIAL_PORT = new AtomicInteger(4380);
 
     public static String SSH_SERVER_HOST = "localhost";
 
@@ -40,7 +41,7 @@ public class SSHAgentBase {
 
     private SshServer sshd = null;
 
-    private int assignedPort = SSH_SERVER_INITIAL_PORT;
+    private int assignedPort = SSH_SERVER_INITIAL_PORT.getAndIncrement();
 
     protected void startMockSSHServer() throws Exception {
         File hostKey = new File(System.getProperty("java.io.tmpdir") + "/key.ser");
@@ -48,7 +49,7 @@ public class SSHAgentBase {
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
         sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
-        sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKey.getPath()));
+        sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(new File(hostKey.getPath())));
         sshd.setShellFactory(new Factory<Command>() {
             @Override
             public Command create() {
@@ -159,7 +160,7 @@ public class SSHAgentBase {
         System.out.println("Mock SSH Server is started using the port " + getAssignedPort());
     }
 
-    protected void stopMockSSHServer() throws InterruptedException {
+    protected void stopMockSSHServer() throws InterruptedException, IOException {
         if (sshd != null) {
             sshd.stop();
             System.out.println("Mock SSH Server is shutdown");
@@ -249,7 +250,7 @@ public class SSHAgentBase {
             try {
                 socket = new ServerSocket(assignedPort, 0, InetAddress.getByName(SSH_SERVER_HOST));
             } catch (BindException be) {
-                assignedPort++;
+                assignedPort = SSH_SERVER_INITIAL_PORT.getAndIncrement();
             } finally {
                 if (socket != null) {
                     socket.close();

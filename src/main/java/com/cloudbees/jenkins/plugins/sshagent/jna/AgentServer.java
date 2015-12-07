@@ -28,7 +28,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.sshd.agent.SshAgent;
 import org.apache.sshd.agent.common.AbstractAgentClient;
 import org.apache.sshd.agent.local.AgentImpl;
-import org.apache.sshd.common.util.Buffer;
 import org.apache.sshd.common.util.OsUtils;
 
 import java.io.Closeable;
@@ -40,6 +39,8 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.sshd.common.util.buffer.Buffer;
+import org.apache.sshd.common.util.buffer.ByteArrayBuffer;
 
 
 /**
@@ -149,7 +150,7 @@ public class AgentServer {
         }
 
         safelyClose(selector);
-        agent.close();
+        safelyClose(agent);
         safelyClose(channel);
         if (authSocket != null) {
             FileUtils.deleteQuietly(new File(authSocket));
@@ -189,7 +190,7 @@ public class AgentServer {
                 int result;
                 while (0 < (result = sessionChannel.read(buf))) {
                     buf.flip();
-                    messageReceived(new Buffer(buf.array(), buf.position(), buf.remaining()));
+                    messageReceived(new ByteArrayBuffer(buf.array(), buf.position(), buf.remaining()));
                     if (result == 1024) {
                         buf.rewind();
                     } else {
@@ -209,6 +210,7 @@ public class AgentServer {
             }
         }
 
+        @Override
         protected void reply(Buffer buf) throws IOException {
             ByteBuffer b = ByteBuffer.wrap(buf.array(), buf.rpos(), buf.available());
             int result = sessionChannel.write(b);

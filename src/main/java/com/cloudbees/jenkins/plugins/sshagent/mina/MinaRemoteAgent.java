@@ -27,6 +27,7 @@ package com.cloudbees.jenkins.plugins.sshagent.mina;
 import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
+import org.apache.commons.io.IOUtils;
 import org.apache.sshd.agent.unix.AgentServer;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
@@ -113,6 +114,6 @@ public class MinaRemoteAgent implements RemoteAgent {
      * {@inheritDoc}
      */
     public void stop() {
-        agent.close();
+        IOUtils.closeQuietly(agent);
     }
 }

@@ -28,6 +28,7 @@ import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
 import org.apache.sshd.common.util.SecurityUtils;
+import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
@@ -95,7 +96,9 @@ public class JNRRemoteAgent implements RemoteAgent {
 
                 if (o instanceof PEMEncryptedKeyPair) {
                     keyPair = converter.getKeyPair(
-                        ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
+                            ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
+                } else if (o instanceof PEMKeyPair) {
+                    keyPair = converter.getKeyPair((PEMKeyPair) o);
                 } else if (o instanceof KeyPair) {
                     keyPair = ((KeyPair) o);
                 } else {
