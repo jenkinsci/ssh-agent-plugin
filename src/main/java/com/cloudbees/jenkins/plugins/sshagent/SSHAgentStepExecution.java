@@ -1,6 +1,7 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsNameProvider;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.inject.Inject;
 import hudson.EnvVars;
@@ -133,14 +134,15 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         for (String id : new LinkedHashSet<String>(step.getCredentials())) {
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(id, SSHUserPrivateKey.class, build);
             if (c == null && !step.isIgnoreMissing()) {
-                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
+                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound(id));
             }
             if (c != null && !userPrivateKeys.contains(c)) {
                 userPrivateKeys.add(c);
             }
         }
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(SSHAgentBuildWrapper.description(userPrivateKey)));
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(
+                    CredentialsNameProvider.name(userPrivateKey)));
         }
 
         listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");

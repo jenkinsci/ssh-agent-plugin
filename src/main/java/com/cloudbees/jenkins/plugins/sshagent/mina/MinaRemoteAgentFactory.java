@@ -26,11 +26,9 @@ package com.cloudbees.jenkins.plugins.sshagent.mina;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
-
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 

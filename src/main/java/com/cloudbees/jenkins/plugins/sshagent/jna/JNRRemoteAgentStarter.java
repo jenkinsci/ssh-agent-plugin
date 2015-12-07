@@ -24,12 +24,10 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
-import jenkins.security.MasterToSlaveCallable;
-
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
-
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
+import jenkins.security.MasterToSlaveCallable;
 
 /**
  * Callable to start the remote agent.
@@ -64,5 +62,4 @@ public class JNRRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Th
         final Channel channel = Channel.current();
         return channel == null ? instance : channel.export(RemoteAgent.class, instance);
     }
-
 }

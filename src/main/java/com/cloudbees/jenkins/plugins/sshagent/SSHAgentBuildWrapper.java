@@ -25,13 +25,15 @@ package com.cloudbees.jenkins.plugins.sshagent;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsNameProvider;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
@@ -46,12 +48,6 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
-import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.Stapler;
-
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.io.PrintWriter;
@@ -62,6 +58,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.Stapler;
 
 /**
  * A build wrapper that provides an SSH agent using supplied credentials
@@ -180,11 +179,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     @SuppressWarnings("unused") // used via stapler
     public CredentialHolder[] getCredentialHolders() {
-        List<CredentialHolder> result = new ArrayList<CredentialHolder>(credentialIds.size());
-        for (String id : credentialIds) {
-            result.add(new CredentialHolder(id));
-        }
-        return result.toArray(new CredentialHolder[result.size()]);
+        return CredentialHolder.toCredentialHolders(credentialIds);
     }
 
     /**
@@ -218,14 +213,15 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                     build
             );
             if (c == null && !ignoreMissing) {
-                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
+                listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound(id));
             }
             if (c != null && !userPrivateKeys.contains(c)) {
                 userPrivateKeys.add(c);
             }
         }
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(description(userPrivateKey)));
+            listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(
+                    CredentialsNameProvider.name(userPrivateKey)));
         }
         try {
             return new SSHAgentEnvironment(launcher, listener, userPrivateKeys);
@@ -245,10 +241,9 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param c the credentials.
      * @return the description.
      */
-    @Nonnull
-    public static String description(@Nonnull StandardUsernameCredentials c) {
-        String description = Util.fixEmptyAndTrim(c.getDescription());
-        return c.getUsername() + (description != null ? " (" + description + ")" : "");
+    @NonNull
+    public static String description(@NonNull StandardUsernameCredentials c) {
+        return "~jenkins/"+ Util.rawEncode(c.getId())+".cert";
     }
 
     /**
@@ -314,7 +309,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
-            for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
+            for (RemoteAgentFactory factory : ExtensionList.lookup(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
@@ -409,7 +404,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          * @return the possibly empty but never null list of ids.
          */
         @NonNull
-        public static List<String> toIdList(@Nullable CredentialHolder[] credentialHolders) {
+        public static List<String> toIdList(@CheckForNull CredentialHolder[] credentialHolders) {
             List<String> result = new ArrayList<String>(credentialHolders == null ? 0 : credentialHolders.length);
             if (credentialHolders != null) {
                 for (CredentialHolder h : credentialHolders) {
@@ -417,6 +412,22 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                 }
             }
             return result;
+        }
+
+        /**
+         * Converts a list of ids into an array of value objects.
+         *
+         * @param credentialIds the list of ids.
+         * @return the possibly empty but never null array of value objects.
+         */
+        @NonNull
+        public static CredentialHolder[] toCredentialHolders(@CheckForNull List<String> credentialIds) {
+            if (credentialIds == null) return new CredentialHolder[0];
+            List<CredentialHolder> result = new ArrayList<CredentialHolder>(credentialIds.size());
+            for (String id : credentialIds) {
+                result.add(new CredentialHolder(id));
+            }
+            return result.toArray(new CredentialHolder[result.size()]);
         }
 
         /**
