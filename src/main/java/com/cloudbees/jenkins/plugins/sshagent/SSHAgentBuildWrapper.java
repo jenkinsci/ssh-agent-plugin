@@ -23,11 +23,11 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUser;
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserListBoxModel;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -68,12 +68,12 @@ import java.util.Map;
  */
 public class SSHAgentBuildWrapper extends BuildWrapper {
     /**
-     * The {@link com.cloudbees.jenkins.plugins.sshcredentials.SSHUser#getId()} of the credentials to use.
+     * The {@link StandardUsernameCredentials#getId()} of the credentials to use.
      */
     private transient String user;
 
     /**
-     * The {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s of the credentials
+     * The {@link StandardUsernameCredentials#getId()}s of the credentials
      * to use.
      *
      * @since 1.5
@@ -240,7 +240,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     }
 
     /**
-     * Helper method that returns a safe description of a {@link SSHUser}.
+     * Helper method that returns a safe description of a {@link StandardUsernameCredentials}.
      *
      * @param c the credentials.
      * @return the description.
@@ -441,7 +441,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             @SuppressWarnings("unused") // used by stapler
             public ListBoxModel doFillIdItems() {
                 Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-                return new SSHUserListBoxModel().withAll(
+                return new StandardUsernameListBoxModel().withMatching(SSHAuthenticator.matcher(),
                         CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, item, ACL.SYSTEM,
                                 Collections.<DomainRequirement>emptyList())
                 );
