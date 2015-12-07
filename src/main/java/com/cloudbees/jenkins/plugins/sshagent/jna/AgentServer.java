@@ -18,6 +18,8 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
+import java.security.PublicKey;
+import java.util.List;
 import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.posix.POSIXFactory;
 import jnr.unixsocket.UnixServerSocket;
@@ -39,8 +41,12 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.sshd.common.util.Pair;
 import org.apache.sshd.common.util.buffer.Buffer;
 import org.apache.sshd.common.util.buffer.ByteArrayBuffer;
+
+import static org.apache.sshd.agent.SshAgentConstants.SSH2_AGENTC_REQUEST_IDENTITIES;
+import static org.apache.sshd.agent.SshAgentConstants.SSH2_AGENT_IDENTITIES_ANSWER;
 
 
 /**
@@ -177,6 +183,9 @@ public class AgentServer {
 
     final class SshAgentSessionSocketHandler extends AbstractAgentClient implements EventHandler {
 
+        public static final byte SSH_AGENTC_REQUEST_RSA_IDENTITIES=1;
+        public static final byte SSH_AGENT_RSA_IDENTITIES_ANSWER=2;
+
         private final UnixSocketChannel sessionChannel;
 
         public SshAgentSessionSocketHandler(UnixSocketChannel sessionChannel) {
@@ -216,6 +225,21 @@ public class AgentServer {
             int result = sessionChannel.write(b);
             if (result < 0) {
                 throw new IOException("Could not write response to socket");
+            }
+        }
+
+        @Override
+        protected void process(int cmd, Buffer req, Buffer rep) throws Exception {
+            switch (cmd) {
+                case SSH_AGENTC_REQUEST_RSA_IDENTITIES:
+                    // stop causing ssh-add -l to log errors
+                    rep.putByte(SSH_AGENT_RSA_IDENTITIES_ANSWER);
+                    rep.putInt(0);
+                    break;
+
+                default:
+                    super.process(cmd, req, rep);
+                    break;
             }
         }
     }
