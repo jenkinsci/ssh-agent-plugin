@@ -106,8 +106,6 @@ public class AgentServer {
                                 processor.process(key);
                             }
                         }
-                    } else {
-                        break;
                     }
                 }
 
