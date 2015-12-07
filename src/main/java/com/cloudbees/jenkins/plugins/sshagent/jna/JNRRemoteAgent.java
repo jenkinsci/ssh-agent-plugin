@@ -98,6 +98,8 @@ public class JNRRemoteAgent implements RemoteAgent {
                         ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
                 } else if (o instanceof KeyPair) {
                     keyPair = ((KeyPair) o);
+                } else {
+                    throw new IOException(String.format("Unsupported key type: %s", o.getClass()));
                 }
                 agent.getAgent().addIdentity(keyPair, comment);
             } finally {
