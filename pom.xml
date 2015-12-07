@@ -146,12 +146,6 @@
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
     <dependency>
-      <groupId>org.jenkins-ci.modules</groupId>
-      <artifactId>sshd</artifactId>
-      <version>1.6</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
       <version>${workflow-jenkins-plugin.version}</version>

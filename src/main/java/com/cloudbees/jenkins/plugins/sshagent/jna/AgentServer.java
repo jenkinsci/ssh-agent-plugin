@@ -186,12 +186,15 @@ public class AgentServer {
         public void process(SelectionKey key) {
             try {
                 ByteBuffer buf = ByteBuffer.allocate(1024);
-                int result = sessionChannel.read(buf);
-
-                if (result > 0) {
+                int result;
+                while (0 < (result = sessionChannel.read(buf))) {
                     buf.flip();
                     messageReceived(new Buffer(buf.array(), buf.position(), buf.remaining()));
-                    return;
+                    if (result == 1024) {
+                        buf.rewind();
+                    } else {
+                        return;
+                    }
                 }
 
                 if (result == -1) {

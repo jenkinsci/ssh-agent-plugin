@@ -1,22 +1,19 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.tasks.Shell;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
-
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 
 public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
@@ -43,7 +40,10 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
+                + "&& ssh-add -l "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p " + getAssignedPort()
+                + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -68,13 +68,23 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        Shell shell = new Shell(
+                "set | grep SSH_AUTH_SOCK "
+                        + "&& ssh-add -l "
+                        + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p "
+                        + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
-        shell = new Shell("ssh-add -l");
+        shell = new Shell("set | grep SSH_AUTH_SOCK "
+                + "&& ssh-add -l "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p "
+                + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
-        shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        shell = new Shell("set | grep SSH_AUTH_SOCK "
+                + "&& ssh-add -l "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p "
+                + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertBuildStatusSuccess(job.scheduleBuild2(0));

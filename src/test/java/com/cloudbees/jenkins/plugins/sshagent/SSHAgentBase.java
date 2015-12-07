@@ -2,10 +2,21 @@ package com.cloudbees.jenkins.plugins.sshagent;
 
 import com.trilead.ssh2.crypto.Base64;
 import com.trilead.ssh2.packets.TypesWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.logging.Logger;
+import org.apache.commons.io.IOUtils;
 import org.apache.sshd.SshServer;
+import org.apache.sshd.common.Factory;
+import org.apache.sshd.server.Command;
+import org.apache.sshd.server.CommandFactory;
+import org.apache.sshd.server.Environment;
+import org.apache.sshd.server.ExitCallback;
 import org.apache.sshd.server.PublickeyAuthenticator;
+import org.apache.sshd.server.command.UnknownCommand;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.session.SessionFactory;
 import org.apache.sshd.server.shell.ProcessShellFactory;
 
 import java.io.BufferedReader;
@@ -38,15 +49,69 @@ public class SSHAgentBase {
         sshd.setHost(SSH_SERVER_HOST);
         sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
         sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKey.getPath()));
-        sshd.setShellFactory(new ProcessShellFactory(new String[]{"uname", "-a"}, EnumSet.of(ProcessShellFactory.TtyOptions.ONlCr)));
+        sshd.setShellFactory(new Factory<Command>() {
+            @Override
+            public Command create() {
+                Logger.getAnonymousLogger().info("Create shell");
+                return new Command() {
+                    private InputStream inputStream;
+                    private OutputStream outputStream;
+                    private OutputStream errorStream;
+                    private ExitCallback exitCallback;
+
+                    @Override
+                    public void setInputStream(InputStream inputStream) {
+                        this.inputStream = inputStream;
+                    }
+
+                    @Override
+                    public void setOutputStream(OutputStream outputStream) {
+                        this.outputStream = outputStream;
+                    }
+
+                    @Override
+                    public void setErrorStream(OutputStream outputStream) {
+                        this.errorStream = outputStream;
+                    }
+
+                    @Override
+                    public void setExitCallback(ExitCallback exitCallback) {
+                        this.exitCallback = exitCallback;
+                    }
+
+                    @Override
+                    public void start(Environment environment) throws IOException {
+                        if (outputStream != null) {
+                            try {
+                                outputStream.write("Connection established. Closing...\n".getBytes("UTF-8"));
+                                outputStream.flush();
+                            } catch (IOException e) {
+                                // squash
+                            }
+                        }
+                        if (exitCallback != null) {
+                            exitCallback.onExit(0);
+                        }
+                    }
+
+                    @Override
+                    public void destroy() {
+
+                    }
+                };
+            }
+        });
+        sshd.setCommandFactory(new CommandFactory() {
+            @Override
+            public Command createCommand(String s) {
+                return new UnknownCommand(s);
+            }
+        });
 
         sshd.setPublickeyAuthenticator(new PublickeyAuthenticator() {
             @Override
             public boolean authenticate(String username, PublicKey publicKey, ServerSession session) {
-                if (!isAuthorizedKey(getPublicKeySignature(publicKey))) {
-                    return false;
-                }
-                return true;
+                return isAuthorizedKey(getPublicKeySignature(publicKey));
             }
 
             private String getPublicKeySignature(PublicKey pk) {
@@ -88,6 +153,7 @@ public class SSHAgentBase {
             }
 
         });
+        sshd.setSessionFactory(new SessionFactory());
 
         sshd.start();
         System.out.println("Mock SSH Server is started using the port " + getAssignedPort());
