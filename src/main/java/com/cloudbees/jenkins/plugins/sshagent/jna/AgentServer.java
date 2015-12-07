@@ -111,9 +111,16 @@ public class AgentServer {
                     }
                 }
 
-                LOGGER.log(Level.FINE, "Death of thread " + Thread.currentThread().getName());
             } catch (IOException ioe) {
                 LOGGER.log(Level.WARNING, "Error while waiting for events", ioe);
+            } finally {
+                if (selectable) {
+                    LOGGER.log(Level.WARNING, "Unexpected death of thread {0}",
+                            Thread.currentThread().getName());
+                } else {
+                    LOGGER.log(Level.FINE, "Thread {0} termination initiated by call to AgentServer.close()",
+                            Thread.currentThread().getName());
+                }
             }
         }
     }
