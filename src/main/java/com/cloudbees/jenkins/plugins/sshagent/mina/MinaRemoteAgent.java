@@ -29,11 +29,8 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
 import org.apache.sshd.agent.unix.AgentServer;
 import org.apache.sshd.common.util.SecurityUtils;
-import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.openssl.PEMEncryptedKeyPair;
-import org.bouncycastle.openssl.PEMDecryptorProvider;
-import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.openssl.PasswordFinder;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -86,21 +83,17 @@ public class MinaRemoteAgent implements RemoteAgent {
             }
         }
         try {
-            PEMParser r = new PEMParser(new StringReader(privateKey));
-            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-            PEMDecryptorProvider decryptionProv = new JcePEMDecryptorProviderBuilder().build(
-                passphrase == null ? null : passphrase.toCharArray());
+            PEMReader r = new PEMReader(new StringReader(privateKey),
+                    passphrase == null ? null : new PasswordFinder() {
+                        public char[] getPassword() {
+                            return passphrase.toCharArray();
+                        }
+                    });
             try {
                 Object o = r.readObject();
-                KeyPair keyPair = null;
-
-                if (o instanceof PEMEncryptedKeyPair) {
-                    keyPair = converter.getKeyPair(
-                        ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
-                } else if (o instanceof KeyPair) {
-                    keyPair = ((KeyPair) o);
+                if (o instanceof KeyPair) {
+                    agent.getAgent().addIdentity((KeyPair) o, comment);
                 }
-                agent.getAgent().addIdentity(keyPair, comment);
             } finally {
                 r.close();
             }
