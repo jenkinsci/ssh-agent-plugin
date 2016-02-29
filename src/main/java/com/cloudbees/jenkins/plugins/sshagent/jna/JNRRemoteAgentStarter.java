@@ -30,6 +30,8 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
+import java.io.File;
+import javax.annotation.CheckForNull;
 
 /**
  * Callable to start the remote agent.
@@ -47,20 +49,23 @@ public class JNRRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Th
      */
     private final TaskListener listener;
 
+    private final @CheckForNull String tempDir;
+
     /**
      * Constructor.
      *
      * @param listener the listener to pass to the agent.
      */
-    public JNRRemoteAgentStarter(TaskListener listener) {
+    public JNRRemoteAgentStarter(TaskListener listener, String tempDir) {
         this.listener = listener;
+        this.tempDir = tempDir;
     }
 
     /**
      * {@inheritDoc}
      */
     public RemoteAgent call() throws Throwable {
-        final JNRRemoteAgent instance = new JNRRemoteAgent(listener);
+        final JNRRemoteAgent instance = new JNRRemoteAgent(listener, tempDir != null ? new File(tempDir) : null);
         final Channel channel = Channel.current();
         return channel == null ? instance : channel.export(RemoteAgent.class, instance);
     }

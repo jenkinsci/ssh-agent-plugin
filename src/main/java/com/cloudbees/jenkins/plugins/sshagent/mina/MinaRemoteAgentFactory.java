@@ -28,6 +28,7 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
 
@@ -64,7 +65,8 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    public RemoteAgent start(Launcher launcher, final TaskListener listener) throws Throwable {
+    public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
+        // TODO temp directory currently ignored
         return launcher.getChannel().call(new MinaRemoteAgentStarter(listener));
     }
 

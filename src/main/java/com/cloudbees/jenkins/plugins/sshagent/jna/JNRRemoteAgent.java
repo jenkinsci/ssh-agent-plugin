@@ -27,6 +27,7 @@ package com.cloudbees.jenkins.plugins.sshagent.jna;
 import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
+import java.io.File;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
@@ -38,6 +39,7 @@ import org.bouncycastle.openssl.PEMParser;
 import java.io.IOException;
 import java.io.StringReader;
 import java.security.KeyPair;
+import javax.annotation.CheckForNull;
 
 /**
  * An implementation that uses Apache SSH to provide the Agent over JNR's UnixSocket implementation.
@@ -62,9 +64,9 @@ public class JNRRemoteAgent implements RemoteAgent {
      * @param listener the listener.
      * @throws Exception if the agent could not start.
      */
-    public JNRRemoteAgent(TaskListener listener) throws Exception {
+    public JNRRemoteAgent(TaskListener listener, @CheckForNull File temp) throws Exception {
         this.listener = listener;
-        agent = new AgentServer();
+        agent = new AgentServer(temp);
         socket = agent.start();
     }
 

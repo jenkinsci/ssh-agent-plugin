@@ -25,8 +25,11 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
 import hudson.ExtensionPoint;
+import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.TaskListener;
+import javax.annotation.CheckForNull;
 
 /**
  * Extension point for ssh-agent providers.
@@ -48,13 +51,25 @@ public abstract class RemoteAgentFactory implements ExtensionPoint {
      */
     public abstract boolean isSupported(Launcher launcher, TaskListener listener);
 
+    @Deprecated
+    public RemoteAgent start(Launcher launcher, TaskListener listener) throws Throwable {
+        return start(launcher, listener, null);
+    }
+
     /**
      * Start a ssh-agent on the specified launcher.
      *
      * @param launcher the launcher on which to start a ssh-agent.
      * @param listener a listener for any diagnostics.
+     * @param temp a temporary directory to use; null if unspecified
      * @return the agent.
      * @throws Throwable if the agent cannot be started.
      */
-    public abstract RemoteAgent start(Launcher launcher, TaskListener listener) throws Throwable;
+    public /*abstract*/ RemoteAgent start(Launcher launcher, TaskListener listener, @CheckForNull FilePath temp) throws Throwable {
+        if (Util.isOverridden(RemoteAgentFactory.class, getClass(), "start", Launcher.class, TaskListener.class)) {
+            return start(launcher, listener);
+        } else {
+            throw new AbstractMethodError("you must implement the start method");
+        }
+    }
 }

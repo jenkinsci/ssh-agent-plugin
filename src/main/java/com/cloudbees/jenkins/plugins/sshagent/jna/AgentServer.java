@@ -18,8 +18,7 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
-import java.security.PublicKey;
-import java.util.List;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.posix.POSIXFactory;
 import jnr.unixsocket.UnixServerSocket;
@@ -41,12 +40,10 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.sshd.common.util.Pair;
+import javax.annotation.CheckForNull;
 import org.apache.sshd.common.util.buffer.Buffer;
 import org.apache.sshd.common.util.buffer.ByteArrayBuffer;
 
-import static org.apache.sshd.agent.SshAgentConstants.SSH2_AGENTC_REQUEST_IDENTITIES;
-import static org.apache.sshd.agent.SshAgentConstants.SSH2_AGENT_IDENTITIES_ANSWER;
 
 
 /**
@@ -62,13 +59,15 @@ public class AgentServer {
     private UnixServerSocket socket;
     private Selector selector;
     private volatile boolean selectable = true;
+    private final @CheckForNull File temp;
 
-    public AgentServer() {
-        this(new AgentImpl());
+    public AgentServer(File temp) {
+        this(new AgentImpl(), temp);
     }
 
-    public AgentServer(SshAgent agent) {
+    public AgentServer(SshAgent agent, File temp) {
         this.agent = agent;
+        this.temp = temp;
     }
 
     public SshAgent getAgent() {
@@ -87,6 +86,9 @@ public class AgentServer {
         channel.register(selector, SelectionKey.OP_ACCEPT, new SshAgentServerSocketHandler());
 
         POSIXFactory.getPOSIX().chmod(authSocket, 0600);
+        if (!new File(authSocket).exists()) {
+            throw new IllegalStateException("failed to create " + authSocket + " of length " + authSocket.length() + " (check UNIX_PATH_MAX)");
+        }
 
         thread = new Thread(new AgentSocketAcceptor(), "SSH Agent socket acceptor " +  authSocket);
         thread.setDaemon(true);
@@ -130,14 +132,22 @@ public class AgentServer {
         }
     }
 
-    static String createLocalSocketAddress() throws IOException {
+    @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="createTempFile will fail anyway if there is a problem with mkdirs")
+    private String createLocalSocketAddress() throws IOException {
         String name;
+        if (temp != null) {
+            temp.mkdirs();
+        }
         if (OsUtils.isUNIX()) {
-            File socket = File.createTempFile("jenkins", ".jnr");
+            File socket = File.createTempFile("ssh", "", temp);
+            if (socket.getAbsolutePath().length() >= /*UNIX_PATH_MAX*/108) {
+                LOGGER.log(Level.WARNING, "Cannot use {0} due to UNIX_PATH_MAX; falling back to system temp dir", socket);
+                socket = File.createTempFile("ssh", "");
+            }
             FileUtils.deleteQuietly(socket);
             name = socket.getAbsolutePath();
         } else {
-            File socket = File.createTempFile("jenkins", ".jnr");
+            File socket = File.createTempFile("ssh", "", temp);
             FileUtils.deleteQuietly(socket);
             name = "\\\\.\\pipe\\" + socket.getName();
         }
