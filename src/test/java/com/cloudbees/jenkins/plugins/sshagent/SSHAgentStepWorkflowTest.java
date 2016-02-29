@@ -53,7 +53,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 job.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
-                        + "    sh 'set | grep SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
