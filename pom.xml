@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.609.1</version>
+    <version>2.3</version>
   </parent>
 
   <artifactId>ssh-agent</artifactId>
@@ -65,11 +65,8 @@
   </scm>
 
   <properties>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
-    <findbugs.failOnError>true</findbugs.failOnError>
+    <jenkins.version>1.609.3</jenkins.version>
+    <java.level>7</java.level> <!-- sshd-core is 7+ -->
     <workflow-jenkins-plugin.version>1.9</workflow-jenkins-plugin.version>
   </properties>
 
@@ -121,12 +118,6 @@
       <version>0.3.1</version>
     </dependency>
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-      <version>3.0.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-step-api</artifactId>
       <version>${workflow-jenkins-plugin.version}</version>
@@ -176,43 +167,23 @@
       <classifier>tests</classifier>
       <scope>test</scope>
      </dependency>
+    <dependency> <!-- TODO Jenkins sshd (1.6) depends on sshd-core 0.8, which is incompatible with 1.0 -->
+      <groupId>org.jenkins-ci.main</groupId>
+      <artifactId>jenkins-war</artifactId>
+      <version>${jenkins.version}</version>
+      <classifier>war-for-test</classifier>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jenkins-ci.modules</groupId>
+          <artifactId>sshd</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
   </dependencies>
 
   <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.0.1</version>
-          <executions>
-            <execution>
-              <id>enforce-maven</id>
-              <goals>
-                <goal>enforce</goal>
-              </goals>
-              <configuration>
-                <rules>
-                  <requireMavenVersion>
-                    <version>(,2.1.0),(2.1.0,2.2.0),(2.2.0,)</version>
-                    <message>Maven 2.1.0 and 2.2.0 produce incorrect GPG signatures and checksums respectively.
-                    </message>
-                  </requireMavenVersion>
-                  <requireMavenVersion>
-                    <version>(,3.0),[3.0.4,)</version>
-                    <message>Maven 3.0 through 3.0.3 inclusive do not pass correct settings.xml to Maven Release Plugin</message>
-                  </requireMavenVersion>
-                </rules>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
     <plugins>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>2.5.1</version>
-      </plugin>
       <plugin>
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
@@ -221,25 +192,6 @@
           <pluginFirstClassLoader>true</pluginFirstClassLoader>
           <compatibleSinceVersion>1.5</compatibleSinceVersion>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs-maven-plugin.version}</version>
-        <configuration>
-          <excludeFilterFile>src/findbugs/excludesFilter.xml</excludeFilterFile>
-          <failOnError>${findbugs.failOnError}</failOnError>
-          <xmlOutput>true</xmlOutput>
-          <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
