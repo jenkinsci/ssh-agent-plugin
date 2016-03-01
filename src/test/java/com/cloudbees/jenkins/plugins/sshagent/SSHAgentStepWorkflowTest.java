@@ -120,7 +120,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
 
-                Pattern pattern = Pattern.compile("jenkins([0-9])+\\.jnr");
+                Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh([0-9])+");
                 Scanner sc = new Scanner(b.getLogFile());
                 List<String> socketFile = new ArrayList<String>();
                 while (sc.hasNextLine()) {
@@ -133,7 +133,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 }
                 sc.close();
 
-                assertEquals(socketFile.size(), 2);
+                assertEquals(socketFile.toString(), 2, socketFile.size());
                 assertNotEquals(socketFile.get(0), socketFile.get(1));
                 stopMockSSHServer();
             }
