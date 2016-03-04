@@ -87,7 +87,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    // TODO use https://github.com/jenkinsci/jenkins/pull/2066
+    // TODO use 1.652 use WorkspaceList.tempDir
     static FilePath tempDir(FilePath ws) {
         return ws.sibling(ws.getName() + System.getProperty(WorkspaceList.class.getName(), "@") + "tmp");
     }
