@@ -128,6 +128,9 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
         FreeStyleProject job = r.createFreeStyleProject();
 
+        SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
+        job.getBuildWrappersList().add(sshAgent);
+
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
