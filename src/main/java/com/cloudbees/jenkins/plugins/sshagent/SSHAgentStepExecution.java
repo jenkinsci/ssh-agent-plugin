@@ -4,9 +4,11 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.inject.Inject;
 import hudson.EnvVars;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.slaves.WorkspaceList;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +33,9 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     @StepContextParameter
     private transient Launcher launcher;
+
+    @StepContextParameter
+    private transient FilePath workspace;
 
     @Inject(optional = true)
     private SSHAgentStep step;
@@ -80,6 +85,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         } catch (IOException io) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
         }
+    }
+
+    // TODO use 1.652 use WorkspaceList.tempDir
+    static FilePath tempDir(FilePath ws) {
+        return ws.sibling(ws.getName() + System.getProperty(WorkspaceList.class.getName(), "@") + "tmp");
     }
 
     private static class Callback extends BodyExecutionCallback {
@@ -149,7 +159,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             if (factory.isSupported(launcher, listener)) {
                 try {
                     listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                    agent = factory.start(launcher, listener);
+                    agent = factory.start(launcher, listener, tempDir(workspace));
                     break;
                 } catch (Throwable t) {
                     faults.put(factory.getDisplayName(), t);

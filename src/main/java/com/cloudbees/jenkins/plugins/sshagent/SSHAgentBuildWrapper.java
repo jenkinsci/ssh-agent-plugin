@@ -32,6 +32,7 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
@@ -56,6 +57,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
@@ -243,7 +245,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private SSHAgentEnvironment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         try {
-            return new SSHAgentEnvironment(launcher, listener);
+            return new SSHAgentEnvironment(launcher, listener, build.getWorkspace());
         } catch (IOException e) {
             throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
         } catch (InterruptedException e) {
@@ -334,6 +336,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             }
         }
 
+        @Deprecated
+        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener) throws Throwable {
+            this(launcher, listener, (FilePath) null);
+        }
+
         /**
          * Construct the environment and initialize on the remote node.
          *
@@ -342,7 +349,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          * @throws Throwable if things go wrong.
          * @since 1.9
          */
-        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener) throws Throwable {
+        public SSHAgentEnvironment(Launcher launcher, BuildListener listener, @CheckForNull FilePath workspace) throws Throwable {
             RemoteAgent agent = null;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
@@ -350,7 +357,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                        agent = factory.start(launcher, listener);
+                        agent = factory.start(launcher, listener, workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null);
                         break;
                     } catch (Throwable t) {
                         faults.put(factory.getDisplayName(), t);
