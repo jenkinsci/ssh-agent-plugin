@@ -27,17 +27,12 @@ package com.cloudbees.jenkins.plugins.sshagent.jna;
 import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
+import jenkins.bouncycastle.api.PEMEncodable;
+
 import java.io.File;
 import org.apache.sshd.common.util.SecurityUtils;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.openssl.PEMEncryptedKeyPair;
-import org.bouncycastle.openssl.PEMDecryptorProvider;
-import org.bouncycastle.openssl.PEMParser;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.security.KeyPair;
 import javax.annotation.CheckForNull;
 
@@ -88,28 +83,8 @@ public class JNRRemoteAgent implements RemoteAgent {
             }
         }
         try {
-            PEMParser r = new PEMParser(new StringReader(privateKey));
-            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-            PEMDecryptorProvider decryptionProv = new JcePEMDecryptorProviderBuilder().build(
-                passphrase == null ? null : passphrase.toCharArray());
-            try {
-                Object o = r.readObject();
-                KeyPair keyPair = null;
-
-                if (o instanceof PEMEncryptedKeyPair) {
-                    keyPair = converter.getKeyPair(
-                            ((PEMEncryptedKeyPair) o).decryptKeyPair(decryptionProv));
-                } else if (o instanceof PEMKeyPair) {
-                    keyPair = converter.getKeyPair((PEMKeyPair) o);
-                } else if (o instanceof KeyPair) {
-                    keyPair = ((KeyPair) o);
-                } else {
-                    throw new IOException(String.format("Unsupported key type: %s", o.getClass()));
-                }
-                agent.getAgent().addIdentity(keyPair, comment);
-            } finally {
-                r.close();
-            }
+            KeyPair keyPair = PEMEncodable.decode(privateKey, passphrase == null ? null : passphrase.toCharArray()).toKeyPair();
+            agent.getAgent().addIdentity(keyPair, comment);
         } catch (Exception e) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_UnableToReadKey(e.getMessage()));
             e.printStackTrace(listener.getLogger());
