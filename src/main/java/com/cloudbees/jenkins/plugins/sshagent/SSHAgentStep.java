@@ -1,11 +1,14 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.Extension;
 import hudson.model.Item;
+import hudson.model.Queue;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
@@ -75,10 +78,14 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
         @SuppressWarnings("unused") // used by stapler
         public ListBoxModel doFillCredentialsItems() {
             Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-            return new StandardUsernameListBoxModel().withAll(
-                    CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, item, ACL.SYSTEM,
-                            Collections.<DomainRequirement>emptyList())
-            );
+            return new StandardUsernameListBoxModel()
+                    .includeMatchingAs(
+                            item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task)item) : ACL.SYSTEM,
+                            item,
+                            SSHUserPrivateKey.class,
+                            Collections.<DomainRequirement>emptyList(),
+                            SSHAuthenticator.matcher()
+                    );
         }
 
     }
