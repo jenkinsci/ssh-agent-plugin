@@ -53,7 +53,7 @@ public class RemoteHelper {
                 e.printStackTrace(logger);
             }
         } else {
-            logger.println("[ssh-agent] Skipped registering BouncyCastle, not running on the remote agent");
+            logger.println("[ssh-agent] Skipped registering BouncyCastle, not running on a remote agent");
         }
     }
 }
