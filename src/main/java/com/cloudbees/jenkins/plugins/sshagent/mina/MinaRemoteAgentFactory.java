@@ -67,7 +67,6 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        
         RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener.getLogger());
         
         // TODO temp directory currently ignored
