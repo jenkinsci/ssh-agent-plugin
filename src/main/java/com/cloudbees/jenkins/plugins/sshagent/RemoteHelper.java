@@ -24,10 +24,9 @@
 
 package com.cloudbees.jenkins.plugins.sshagent;
 
-import java.io.PrintStream;
-
 import javax.annotation.Nonnull;
 
+import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
 import jenkins.bouncycastle.api.InstallBouncyCastleJCAProvider;
@@ -43,17 +42,16 @@ public class RemoteHelper {
      * @param channel to communicate with the agent
      * @param logger to log the messages
      */
-    public static void registerBouncyCastle(@Nonnull VirtualChannel channel, @Nonnull final PrintStream logger) {
+    public static void registerBouncyCastle(@Nonnull VirtualChannel channel, @Nonnull final TaskListener listener) {
         if (channel instanceof Channel) {
             try {
                 InstallBouncyCastleJCAProvider.on((Channel) channel);
-                logger.println("[ssh-agent] Registered BouncyCastle on the remote agent");
+                listener.getLogger().println("[ssh-agent] Registered BouncyCastle on the remote agent");
             } catch (Exception e) {
-                logger.println("[ssh-agent] WARNING: could not register BouncyCastle on the remote agent." + e.getMessage());
-                e.printStackTrace(logger);
+                e.printStackTrace(listener.error("[ssh-agent] WARNING: could not register BouncyCastle on the remote agent."));
             }
         } else {
-            logger.println("[ssh-agent] Skipped registering BouncyCastle, not running on a remote agent");
+            listener.getLogger().println("[ssh-agent] Skipped registering BouncyCastle, not running on a remote agent");
         }
     }
 }

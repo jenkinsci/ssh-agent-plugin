@@ -61,7 +61,7 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener.getLogger());
+        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
 
         return launcher.getChannel().call(new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
     }
