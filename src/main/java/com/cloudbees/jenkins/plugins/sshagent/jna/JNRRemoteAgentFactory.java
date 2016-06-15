@@ -26,6 +26,8 @@ package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
+import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
+
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -59,6 +61,8 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
+        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener.getLogger());
+
         return launcher.getChannel().call(new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
     }
 
