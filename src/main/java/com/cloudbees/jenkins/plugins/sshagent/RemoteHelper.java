@@ -48,7 +48,7 @@ public class RemoteHelper {
                 InstallBouncyCastleJCAProvider.on((Channel) channel);
                 listener.getLogger().println("[ssh-agent] Registered BouncyCastle on the remote agent");
             } catch (Exception e) {
-                e.printStackTrace(listener.error("[ssh-agent] WARNING: could not register BouncyCastle on the remote agent."));
+                e.printStackTrace(listener.error("[ssh-agent] Could not register BouncyCastle on the remote agent."));
             }
         } else {
             listener.getLogger().println("[ssh-agent] Skipped registering BouncyCastle, not running on a remote agent");
