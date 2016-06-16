@@ -26,6 +26,9 @@ package com.cloudbees.jenkins.plugins.sshagent;
 
 import javax.annotation.Nonnull;
 
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
@@ -34,13 +37,14 @@ import jenkins.bouncycastle.api.InstallBouncyCastleJCAProvider;
 /**
  * Helper class for common remote tasks
  */
+@Restricted(NoExternalUse.class)
 public class RemoteHelper {
 
     /**
      * Registers Bouncy Castle on a remote node logging the result.
      * 
      * @param channel to communicate with the agent
-     * @param logger to log the messages
+     * @param listener to log the messages
      */
     public static void registerBouncyCastle(@Nonnull VirtualChannel channel, @Nonnull final TaskListener listener) {
         if (channel instanceof Channel) {
