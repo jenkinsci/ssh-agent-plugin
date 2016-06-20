@@ -31,7 +31,6 @@ import jenkins.bouncycastle.api.PEMEncodable;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.sshd.agent.unix.AgentServer;
-import org.apache.sshd.common.util.SecurityUtils;
 
 import java.io.IOException;
 import java.security.KeyPair;
@@ -76,12 +75,6 @@ public class MinaRemoteAgent implements RemoteAgent {
      * {@inheritDoc}
      */
     public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
-        if (!SecurityUtils.isBouncyCastleRegistered()) {
-            SecurityUtils.setRegisterBouncyCastle(true);
-            if (!SecurityUtils.isBouncyCastleRegistered()) {
-                throw new IllegalStateException("BouncyCastle must be registered as a JCE provider");
-            }
-        }
         try {
             KeyPair keyPair = PEMEncodable.decode(privateKey, passphrase == null ? null : passphrase.toCharArray()).toKeyPair();
             agent.getAgent().addIdentity(keyPair, comment);
