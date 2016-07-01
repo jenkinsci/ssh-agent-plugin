@@ -41,6 +41,8 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.model.Queue;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
@@ -488,10 +490,14 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             @SuppressWarnings("unused") // used by stapler
             public ListBoxModel doFillIdItems() {
                 Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
-                return new StandardUsernameListBoxModel().withMatching(SSHAuthenticator.matcher(),
-                        CredentialsProvider.lookupCredentials(SSHUserPrivateKey.class, item, ACL.SYSTEM,
-                                Collections.<DomainRequirement>emptyList())
-                );
+                return new StandardUsernameListBoxModel()
+                        .includeMatchingAs(
+                                item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) item) : ACL.SYSTEM,
+                                item,
+                                SSHUserPrivateKey.class,
+                                Collections.<DomainRequirement>emptyList(),
+                                SSHAuthenticator.matcher()
+                        );
             }
 
         }
