@@ -142,6 +142,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
         for (String id : new LinkedHashSet<String>(step.getCredentials())) {
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(id, SSHUserPrivateKey.class, build);
+            CredentialsProvider.track(build, c);
             if (c == null && !step.isIgnoreMissing()) {
                 listener.fatalError(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
             }
