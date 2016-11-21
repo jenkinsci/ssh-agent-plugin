@@ -24,15 +24,16 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
+import jenkins.security.MasterToSlaveCallable;
+
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
 import hudson.remoting.Channel;
 
 /**
  * Callable to start the remote agent.
  */
-public class ExecRemoteAgentStarter implements Callable<RemoteAgent, Throwable> {
+public class ExecRemoteAgentStarter extends MasterToSlaveCallable<RemoteAgent, Throwable> {
     /**
      * Need to pass this through.
      */
