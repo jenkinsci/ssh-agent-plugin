@@ -62,7 +62,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 job.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
-                        + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
@@ -103,10 +103,10 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 p.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
-                        + "    sh 'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "    echo \"SSH Agent before restart ${env.SSH_AUTH_SOCK}\"\n"
                         + "    semaphore 'sshAgentAvailableAfterRestart'\n"
-                        + "    sh 'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "    sh 'ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "    echo \"SSH Agent after restart ${env.SSH_AUTH_SOCK}\"\n"
                         + "  }\n"
                         + "}\n", true));
@@ -174,7 +174,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 job.setDefinition(new CpsFlowDefinition(""
                   + "node {\n"
                   + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
-                  + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                  + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                   + "  }\n"
                   + "}\n", true)
                 );

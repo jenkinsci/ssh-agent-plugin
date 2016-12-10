@@ -51,7 +51,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
         Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
                 + "&& ssh-add -l "
-                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort()
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort()
                 + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
@@ -80,19 +80,19 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         Shell shell = new Shell(
                 "set | grep SSH_AUTH_SOCK "
                         + "&& ssh-add -l "
-                        + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p "
+                        + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p "
                         + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         shell = new Shell("set | grep SSH_AUTH_SOCK "
                 + "&& ssh-add -l "
-                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p "
                 + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         shell = new Shell("set | grep SSH_AUTH_SOCK "
                 + "&& ssh-add -l "
-                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p "
                 + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
@@ -115,7 +115,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
         FreeStyleProject job = r.createFreeStyleProject();
 
-        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
@@ -140,7 +140,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
+        Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
         r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
@@ -171,7 +171,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
         Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
           + "&& ssh-add -l "
-          + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-dss -p " + getAssignedPort()
+          + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o HostKeyAlgorithms=ssh-dss -p " + getAssignedPort()
           + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
