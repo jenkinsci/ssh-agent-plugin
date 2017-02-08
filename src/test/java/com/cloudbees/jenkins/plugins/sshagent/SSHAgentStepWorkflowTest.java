@@ -129,7 +129,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
 
-                Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh([0-9])+");
+                Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh-.+/agent.(\\d)+");
                 Scanner sc = new Scanner(b.getLogFile());
                 List<String> socketFile = new ArrayList<String>();
                 while (sc.hasNextLine()) {
