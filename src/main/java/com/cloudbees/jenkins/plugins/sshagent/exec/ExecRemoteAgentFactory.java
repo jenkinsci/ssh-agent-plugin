@@ -56,23 +56,23 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
-    	try {    	      
-    		int status = launcher.launch().cmds("ssh-agent", "-k").join();
-    		/* 
-    		 * `ssh-agent -k` returns 0 if terminates running agent or 1 if
-    		 * it fails to terminate it. On Linux, 
-    		 */
-    	    return (status == 0) || (status == 1);
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	    listener.getLogger().println("Could not find ssh-agent: IOException: " + e.getMessage());
-    	    listener.getLogger().println("Check if ssh-agent is installed and in PATH");
-    	    return false;
-    	} catch (InterruptedException e) {
-    		e.printStackTrace();
-    		listener.getLogger().println("Could not find ssh-agent: InterruptedException: " + e.getMessage());    		
-    	    return false;
-    	}
+        try {             
+            int status = launcher.launch().cmds("ssh-agent", "-k").join();
+            /* 
+             * `ssh-agent -k` returns 0 if terminates running agent or 1 if
+             * it fails to terminate it. On Linux, 
+             */
+            return (status == 0) || (status == 1);
+        } catch (IOException e) {
+            e.printStackTrace();
+            listener.getLogger().println("Could not find ssh-agent: IOException: " + e.getMessage());
+            listener.getLogger().println("Check if ssh-agent is installed and in PATH");
+            return false;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            listener.getLogger().println("Could not find ssh-agent: InterruptedException: " + e.getMessage());          
+            return false;
+        }
     }
 
     /**
