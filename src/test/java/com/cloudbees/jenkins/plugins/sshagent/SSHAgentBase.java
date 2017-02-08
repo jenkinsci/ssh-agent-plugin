@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
-import org.apache.commons.io.IOUtils;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.server.Command;
@@ -18,7 +17,6 @@ import org.apache.sshd.server.command.UnknownCommand;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.session.SessionFactory;
-import org.apache.sshd.server.shell.ProcessShellFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,10 +24,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.*;
 import java.security.PublicKey;
-import java.security.interfaces.DSAParams;
-import java.security.interfaces.DSAPublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.EnumSet;
 
 public class SSHAgentBase {
 
@@ -45,11 +40,14 @@ public class SSHAgentBase {
 
     protected void startMockSSHServer() throws Exception {
         File hostKey = new File(System.getProperty("java.io.tmpdir") + "/key.ser");
+        hostKey.delete(); // do not carry from test to test
         sshd = SshServer.setUpDefaultServer();
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
         sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
-        sshd.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(new File(hostKey.getPath())));
+        SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(new File(hostKey.getPath()));
+        hostKeyProvider.setAlgorithm(/* TODO when upgrading sshd: KeyUtils.RSA_ALGORITHM */"RSA"); // http://stackoverflow.com/a/33692432/12916
+        sshd.setKeyPairProvider(hostKeyProvider);
         sshd.setShellFactory(new Factory<Command>() {
             @Override
             public Command create() {
@@ -122,16 +120,6 @@ public class SSHAgentBase {
                     tw.writeString("ssh-rsa");
                     tw.writeMPInt(rpk.getPublicExponent());
                     tw.writeMPInt(rpk.getModulus());
-                    return new String(Base64.encode(tw.getBytes()));
-                }
-                if (pk instanceof DSAPublicKey) {
-                    DSAPublicKey rpk = (DSAPublicKey) pk;
-                    tw.writeString("ssh-dss");
-                    DSAParams p = rpk.getParams();
-                    tw.writeMPInt(p.getP());
-                    tw.writeMPInt(p.getQ());
-                    tw.writeMPInt(p.getG());
-                    tw.writeMPInt(rpk.getY());
                     return new String(Base64.encode(tw.getBytes()));
                 }
                 throw new IllegalArgumentException("Unknown key type: " + pk);
