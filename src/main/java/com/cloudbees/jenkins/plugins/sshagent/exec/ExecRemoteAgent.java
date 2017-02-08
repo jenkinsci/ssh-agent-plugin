@@ -24,7 +24,6 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
-import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 
 import hudson.model.TaskListener;
@@ -35,17 +34,18 @@ import java.lang.ProcessBuilder;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import java.io.IOException;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.sshd.common.util.OsUtils;
 
 /**
  * An implementation that uses native SSH agent installed on a system.
@@ -104,11 +104,12 @@ public class ExecRemoteAgent implements RemoteAgent {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
         File keyFile = File.createTempFile("private_key_", ".key");
-		FileWriter keyWriter = new FileWriter(keyFile);
-		keyWriter.write(privateKey);
-		keyWriter.close();
+        try (FileOutputStream os = new FileOutputStream(keyFile); Writer keyWriter = new OutputStreamWriter(os, StandardCharsets.US_ASCII)) {
+            keyWriter.write(privateKey);
+        }
 		setReadOnlyForOwner(keyFile);
 		
 		File askpass = createAskpassScript();
@@ -119,12 +120,12 @@ public class ExecRemoteAgent implements RemoteAgent {
 
 		final Process sshAdd = execProcess("ssh-add " + keyFile.getPath());
 		
-		String errorString = streamToString(sshAdd.getErrorStream());
+		String errorString = IOUtils.toString(sshAdd.getErrorStream());
 		if (!errorString.isEmpty()) {
 			errorString += "Check the passphrase for the private key.";
 			listener.getLogger().println(errorString);
 		}
-		IOUtils.copy(sshAdd.getInputStream(), listener.getLogger());
+		IOUtils.copy(sshAdd.getInputStream(), listener.getLogger()); // default encoding appropriate here: local process output
 		
 		try {
 			sshAdd.waitFor();
@@ -137,7 +138,9 @@ public class ExecRemoteAgent implements RemoteAgent {
 		processBuilder.environment().remove("DISPLAY");
 		processBuilder.environment().remove("SSH_PASSPHRASE");
 		
-		askpass.delete(); // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
+		if (askpass.isFile() && !askpass.delete()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
+			listener.getLogger().println("ExecRemoteAgent::addIdentity - failed to delete " + askpass);
+        }
 		
 		if (!keyFile.delete()) {
 			listener.getLogger().println("ExecRemoteAgent::addIdentity - could NOT delete a temp file with a private key!");
@@ -169,19 +172,13 @@ public class ExecRemoteAgent implements RemoteAgent {
 		return process;
 	}
 	
-	private String streamToString(InputStream is) throws IOException {
-		ByteArrayOutputStream os  = new ByteArrayOutputStream();
-		IOUtils.copy(is, os);
-		return os.toString();
-	}
-	
 	/**
 	 * Parses ssh-agent output.
 	 */
 	private Map<String,String> parseAgentEnv(Process agent) throws Exception{
 		Map<String, String> env = new HashMap<String, String>();
 		
-		String agentOutput = streamToString(agent.getInputStream());
+		String agentOutput = IOUtils.toString(agent.getInputStream()); // default encoding appropriate here: local filenames
 		
 		// get SSH_AUTH_SOCK
 		env.put(AuthSocketVar, getAgentValue(agentOutput, AuthSocketVar));
@@ -230,11 +227,11 @@ public class ExecRemoteAgent implements RemoteAgent {
 
 		File askpass = File.createTempFile("askpass_", suffix);
 
-		script = "#!/bin/sh\necho $SSH_PASSPHRASE\nrm " + askpass.getAbsolutePath().replace("\\", "\\\\") + "\n";
+		script = "#!/bin/sh\necho $SSH_PASSPHRASE\nrm " + askpass.getAbsolutePath().replace("\\", "\\\\") + "\n"; // TODO try using `rm $0` instead
 
-		FileWriter askpassWriter = new FileWriter(askpass);
-		askpassWriter.write(script);
-		askpassWriter.close();
+        try (OutputStream os = new FileOutputStream(askpass); Writer askpassWriter = new OutputStreamWriter(os, /* due to presence of a local filename */Charset.defaultCharset())) {
+            askpassWriter.write(script);
+        }
 		
 		// executable only for a current user
 		askpass.setExecutable(false, false);
