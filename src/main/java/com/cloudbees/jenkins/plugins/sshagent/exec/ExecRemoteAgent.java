@@ -31,6 +31,7 @@ import hudson.Launcher;
 import hudson.model.TaskListener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +70,7 @@ public class ExecRemoteAgent implements RemoteAgent {
         if (launcher.launch().cmds("ssh-agent").stdout(baos).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
             throw new AbortException("Failed to run ssh-agent");
         }
-        agentEnv = parseAgentEnv(baos.toString()); // TODO could include local filenames, better to look up remote charset
+        agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII)); // TODO could include local filenames, better to look up remote charset
         
         if (agentEnv.containsKey(AuthSocketVar))
             socket = agentEnv.get(AuthSocketVar);
