@@ -60,7 +60,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
                 job.setDefinition(new CpsFlowDefinition(""
-                        + "node {\n"
+                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
                         + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"

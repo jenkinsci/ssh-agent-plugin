@@ -45,6 +45,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         SystemCredentialsProvider.getInstance().save();
 
         FreeStyleProject job = r.createFreeStyleProject();
+        job.setAssignedNode(r.createSlave());
 
         SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
         job.getBuildWrappersList().add(sshAgent);
