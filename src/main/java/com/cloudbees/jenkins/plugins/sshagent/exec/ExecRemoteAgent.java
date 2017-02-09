@@ -96,18 +96,20 @@ public class ExecRemoteAgent implements RemoteAgent {
         try {
             keyFile.chmod(0600);
 
-            FilePath askpass = createAskpassScript();
+            FilePath askpass = passphrase != null ? createAskpassScript() : null;
             try {
 
                 Map<String,String> env = new HashMap<>(agentEnv);
-                env.put("SSH_PASSPHRASE", passphrase);
-                env.put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
-                env.put("SSH_ASKPASS", askpass.getRemote());
+                if (passphrase != null) {
+                    env.put("SSH_PASSPHRASE", passphrase);
+                    env.put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
+                    env.put("SSH_ASKPASS", askpass.getRemote());
+                }
                 if (launcher.launch().cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
                     throw new AbortException("Failed to run ssh-add");
                 }
             } finally {
-                if (askpass.exists()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
+                if (askpass != null && askpass.exists()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
                     askpass.delete();
                 }
             }
