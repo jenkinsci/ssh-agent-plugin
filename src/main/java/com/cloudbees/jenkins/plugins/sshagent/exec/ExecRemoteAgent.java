@@ -72,10 +72,11 @@ public class ExecRemoteAgent implements RemoteAgent {
         }
         agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII)); // TODO could include local filenames, better to look up remote charset
         
-        if (agentEnv.containsKey(AuthSocketVar))
+        if (agentEnv.containsKey(AuthSocketVar)) {
             socket = agentEnv.get(AuthSocketVar);
-        else
-            socket = ""; // socket is not set
+        } else {
+            throw new AbortException(AuthSocketVar + " was not included");
+        }
     }
 
     /**
