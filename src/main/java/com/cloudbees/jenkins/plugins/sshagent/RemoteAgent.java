@@ -45,10 +45,10 @@ public interface RemoteAgent {
      * @param comment    the comment to give to the key.
      * @throws java.io.IOException if something went wrong.
      */
-    void addIdentity(String privateKey, String passphrase, String comment) throws IOException;
+    void addIdentity(String privateKey, String passphrase, String comment) throws IOException, InterruptedException;
 
     /**
      * Stops the agent.
      */
-    void stop();
+    void stop() throws IOException, InterruptedException;
 }

@@ -32,6 +32,7 @@ import hudson.Launcher;
 import hudson.model.TaskListener;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 
 
@@ -55,7 +56,7 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
         try {             
-            int status = launcher.launch().cmds("ssh-agent", "-k").join();
+            int status = launcher.launch().cmds("ssh-agent", "-k").quiet(true).start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
             /* 
              * `ssh-agent -k` returns 0 if terminates running agent or 1 if
              * it fails to terminate it. On Linux, 
@@ -78,6 +79,6 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        return launcher.getChannel().call(new ExecRemoteAgentStarter(listener));
+        return new ExecRemoteAgent(launcher, listener, temp);
     }
 }
