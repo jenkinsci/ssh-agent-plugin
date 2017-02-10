@@ -391,7 +391,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          * @throws IOException if the key cannot be added.
          * @since 1.9
          */
-        public void add(SSHUserPrivateKey key) throws IOException {
+        public void add(SSHUserPrivateKey key) throws IOException, InterruptedException {
             final Secret passphrase = key.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : key.getPrivateKeys()) {

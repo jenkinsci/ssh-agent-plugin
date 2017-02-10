@@ -82,8 +82,9 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         try {
             purgeSockets();
             initRemoteAgent();
-        } catch (IOException io) {
+        } catch (IOException | InterruptedException x) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_CouldNotStartAgent());
+            x.printStackTrace(listener.getLogger());
         }
     }
 
@@ -92,7 +93,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         return ws.sibling(ws.getName() + System.getProperty(WorkspaceList.class.getName(), "@") + "tmp");
     }
 
-    private static class Callback extends BodyExecutionCallback {
+    private static class Callback extends BodyExecutionCallback.TailCall {
 
         private static final long serialVersionUID = 1L;
 
@@ -103,15 +104,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
 
         @Override
-        public void onSuccess(StepContext context, Object result) {
+        protected void finished(StepContext context) throws Exception {
             execution.cleanUp();
-            context.onSuccess(result);
-        }
-
-        @Override
-        public void onFailure(StepContext context, Throwable t) {
-            execution.cleanUp();
-            context.onFailure(t);
         }
 
     }
@@ -137,7 +131,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      *
      * @throws IOException
      */
-    private void initRemoteAgent() throws IOException {
+    private void initRemoteAgent() throws IOException, InterruptedException {
 
         List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
         for (String id : new LinkedHashSet<String>(step.getCredentials())) {
@@ -197,17 +191,16 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     /**
      * Shuts down the current SSH Agent and purges socket files.
      */
-    private void cleanUp() {
+    private void cleanUp() throws Exception {
         try {
             TaskListener listener = getContext().get(TaskListener.class);
             if (agent != null) {
                 agent.stop();
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
-        } catch (Throwable th) {
-            getContext().onFailure(th);
+        } finally {
+            purgeSockets();
         }
-        purgeSockets();
     }
 
     /**
