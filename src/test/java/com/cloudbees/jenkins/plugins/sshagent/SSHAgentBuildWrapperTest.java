@@ -6,11 +6,13 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import hudson.model.Fingerprint;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.tasks.Shell;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -187,4 +189,66 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
         stopMockSSHServer();
     }
+
+    @Issue("JENKINS-42093")
+    @Test
+    public void sshAgentWithSpacesInWorkspacePath() throws Exception {
+        startMockSSHServer();
+
+        List<String> credentialIds = new ArrayList<String>();
+        credentialIds.add(CREDENTIAL_ID);
+
+        SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+        SystemCredentialsProvider.getInstance().getCredentials().add(key);
+        SystemCredentialsProvider.getInstance().save();
+
+        FreeStyleProject job = r.createFreeStyleProject("name with spaces");
+        job.setAssignedNode(r.createSlave());
+
+        SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
+        job.getBuildWrappersList().add(sshAgent);
+
+        Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
+                + "&& ssh-add -l "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p " + getAssignedPort()
+                + " -v -l cloudbees " + SSH_SERVER_HOST);
+        job.getBuildersList().add(shell);
+
+        Future<? extends FreeStyleBuild> build = job.scheduleBuild2(0);
+        r.assertBuildStatusSuccess(build);
+        r.assertLogNotContains("rm: ", build.get());
+
+        stopMockSSHServer();
+    }
+
+    @Test
+    public void sshAgentWithTrickyPassphrase() throws Exception {
+        startMockSSHServer();
+
+        List<String> credentialIds = new ArrayList<String>();
+        credentialIds.add(CREDENTIAL_ID);
+
+        SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey2()), "*  .*", "test");
+        SystemCredentialsProvider.getInstance().getCredentials().add(key);
+        SystemCredentialsProvider.getInstance().save();
+
+        FreeStyleProject job = r.createFreeStyleProject();
+        job.setAssignedNode(r.createSlave());
+
+        SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
+        job.getBuildWrappersList().add(sshAgent);
+
+        Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
+                + "&& ssh-add -l "
+                + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p " + getAssignedPort()
+                + " -v -l cloudbees " + SSH_SERVER_HOST);
+        job.getBuildersList().add(shell);
+
+        r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+        stopMockSSHServer();
+    }
+
 }

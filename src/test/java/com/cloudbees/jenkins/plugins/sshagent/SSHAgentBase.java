@@ -218,6 +218,68 @@ public class SSHAgentBase {
     }
 
     /**
+     * Same key as getPrivateKey(), but encrypted with a different passphrase
+     *
+     * @return
+     */
+    public String getPrivateKey2() {
+        return    "-----BEGIN RSA PRIVATE KEY-----\n"
+                + "Proc-Type: 4,ENCRYPTED\n"
+                + "DEK-Info: AES-128-CBC,4F1CC1FC8ABFF63F16459D0FD743235A\n"
+                + "\n"
+                + "5eKeY3ayrWVVrfx2aDpxB487t5NmykzZaLwlZ2YD97DA7mE4S87ywwBF3Dg8pG9e\n"
+                + "VCa03SfcjOITuXh6+Eh3dlAC5xC3Cg/gYfRKPUYrkNDkGOuAjuf/54iE+OVMS3Cm\n"
+                + "gc2ZSWHKS1VRsh/StcVGemGsGknx5Ij7vNjHTLLi7RlK290PNTFRjbzpGUziTYqE\n"
+                + "tYUfMtCUeAupZBxZTr+BLkA9wSLmDsA0K6J5kkGAvTZ4xM71u48QGjgOlOIiVkQK\n"
+                + "r+kdtyvN2M38mkH+abUWYBs/Cfk0ZjpCez83XmEM8bASEbH6BAg9JZ1JdJp/dSiW\n"
+                + "z267NfjGLKdUXreopgJhEj7OFIjxWsXcr1MVx9NrrdRYa+JPvooUtUu4AI4zG72E\n"
+                + "MOCEydUwS8rMVsm3f2nDowlCq8ZyVRPoTGtkJgIzolJYcnd9XpnhqQvK+9PLva4k\n"
+                + "3MIqIhyeyOoXl77ESZbl2VGwkqx9tR5HnSPr5mDXNJsSFLaxYkvfz8Zv97t4zAtb\n"
+                + "lLtxnlKFwXwYiSudlK0d249BAIj+pBQBz+gq7Teks1Er8Xr4TaCUG9DRer1j9wYM\n"
+                + "EhchnG/Vtvq6Lk8JN4GiAGpQNhk7Zxy71gljzidN79bMIPKpaF5xqJOLstUrxKGw\n"
+                + "yIrD6Pn2Mf7QbM5EK7bnWsWITN0LDzGej1FtnXSBQvJz/QEDK2v/MAgJd9bT3Unm\n"
+                + "cS0VbY0mi+UeIPcpvS5gc0k/6wXzr2IHKBDjre2Nh7fRZiII8dB60gg9GtzMeo9b\n"
+                + "JuOUGCMoXl0h6AG6mrF5tWRy58vs19JJYuwSS/tVbxVEiwWGaQ/oeaTDBnQ/HOhk\n"
+                + "ZssU5Ks0hQcRnnbV+3sikCx6k33Jf1vyfmzEKSyQdKL9GfWCmS/fBz7liPHaLtJu\n"
+                + "PNToqL2A0a6eMsk7ytttVy/HpfSCMDcbyYcBEL+lEhb3T6uL5+yyRRaXk+ZkXxUJ\n"
+                + "p/0vUBhNnwIlU4MYZsoU4R27ss7SDl3orra84GpfY1x+DdVUeDBnlH3fbvQzOT9w\n"
+                + "3RLxkTl6H3DbfiAwWeSJF3UZK88c2J69rl4lrwfV/g4UMuK50GDby3HNV8zuLFeI\n"
+                + "1pRyqfEqVRRAde9N1+uMa+fqZDujw3eH/hhh7nPa2NYawQN4klutLzpAj/lv6uU/\n"
+                + "ubeISASZbv4bBGHROvprsglx/GuJ93zIdcwbdtyBysqbZsjoZhL2mTV0kmvlxzL0\n"
+                + "oplngeaVcRzhnDEbFXNo6e9EthCCxUPe46xALsH+JBI7scgq+hTHtHTMrk3I/CU7\n"
+                + "RqjaqWG/0FhWMKpdIVghIHHHTL3ndsoFNiB3qXRd/3OOmXJP302MDX4Zj4SxBGB3\n"
+                + "YZeOj14yMZ51TJCR+NfqK7a7YSZHPU8ynOUtOf9XKfXwD2oyD42Zp0E6kY4INJ0k\n"
+                + "buxhmHH1f4cva1zEXwOTzziKMpk1TYW1oi+7YcbeLDRs2I3Fvz2KCMmUnxIpxT8Q\n"
+                + "ol1IyPxfKl6VD51gVKERNdEIyHLarHn+DiSHBto3JNj395H9vm68hdoFQDbalfPr\n"
+                + "X3iUnblOV+BwPz8IGRN90evksIA3r/PUFAFuwfDAmrPe7qUid3ur+nrVVxojLbgX\n"
+                + "JHN9BtDRQghkDt2igqgzuuwvShpyS1Yya5byA1Pbegrl4Yn1hERLie0kAhihZemB\n"
+                + "NRQDw2T4nuI0uRHL1Pold8phlK/xINh5aOhD40qOykz5LFYk2m3Eh+tdYEdexhYj\n"
+                + "x2HxCRL9jsCGdmifNqCT4WVLnj0YXuszeGIAKZE6wCyugQQ+2yFg1eVDE7HdS+ht\n"
+                + "U8zpyVNRD/r6rL/9D7ljHca9+c4QMtYK9sd/qh040CNkUxuPjUEVtPVUmap6gK/u\n"
+                + "zW7eUofNygSZrZ96NlKF8z2WGDA60RN8VimQZf6TiY87XhceHM1rS8jbtIkhzooH\n"
+                + "cDsX2HJCtBZMlvZZxNxmPMEVhmHYVvtCM/4MG5Ud8mQ41I1icreiAldpXAXD4Nua\n"
+                + "WhrgnHt4dsvkzVC8pVW5JMjNVGw55WmJutwnQPisqMCJLMpxu18Bi/NG1I3Syj9f\n"
+                + "Jyqp0X5i4CI1IS19a8+zRk093jbdC83N6fnFI58vwOeHlEQEgWptJe9LJ4YfhfQ9\n"
+                + "ha/XfGwshCs2/aTv0vIU/2pbkCA3kC9QLAc/r8QlgKV3/yqVlQ70BqxSbw0SsVVg\n"
+                + "gDNLx+BFRVq+bnohANvdfgjqF7OXtKPaYxj9ggQoC2vlb8uvCzB6eTi4eP68Flvx\n"
+                + "NC7zg1f8y1/Me6tFRCKzBEZg29NiEnmQaO4daCtVL92HhcFjdG43PSwKRL48Uc73\n"
+                + "9yZIm4hcImp71sS5QO7jsPxiTXNa6rWaAsd12Tii7/kNIT5NOACWVr4WxUAdTVMH\n"
+                + "leQueMk/8iGU6aM5Zr4SGezS934hOig3w8zlHOLSE+SadiexpXjPJe1RBb/9D8qG\n"
+                + "7nynZVMbONbXRYWHuCPal/DdrkN6YynD5yBqrFvxZ7svJJFIH+Mw6o5DI3fYPER/\n"
+                + "QB8TuBvdE5dSyuAPd3bHAugQyZMSn6usENWsHdquVvBGJZRnmVJxYBWPD5/XD5d3\n"
+                + "UXi6ctjwBGobJOMgg4XzO6AxH9hKg8yacAv67N921zydnEjYMvosErtBXq6E6HXI\n"
+                + "5ytVdR6q5vgG0vjXflpBsxRZm2I9uNOQuR6sjC0HDMmktQOESGWy+IwH5Z0vrs98\n"
+                + "Rk6StDVqHlwbW85sCOBzYeZs9w5C1e9fT76kMTsm/E28y5OduLXRTW/Eqnr0DeUf\n"
+                + "KgPw/bgJemOKNC0W6jZsqAFpArQ0PGuWikhsdoSIhRHXHjQnSqKv5qKzYiFZvPyV\n"
+                + "8P+u3DvYl5pRY9W2qyuFcrspWlgaunKV9VK5VJGyTmt0ezI+dSNvOmCSmOxv5nly\n"
+                + "+00Ilh9+VfudUq+WHAsUEC5VSL2NqLjHryBF/BZwCa+3Kdikh9qbEMC159Hw7rZs\n"
+                + "qrgr6SWapKNogPqDbeTRA6w9bptKzSUxm371pr6RefDcuPaab9jamqQPCg7rqnjs\n"
+                + "+2nKK8wY67JkilnYmWzqTykKUVGoKMqfSIv5COOTgWCGNtipIxhoMIqHpCuUp6uJ\n"
+                + "VZYF6iimsK8r3AqMCwXT7SyGPkbU7LaLpE39sdKiqQr7AV6xidR2fii/+oh+EECl\n"
+                + "-----END RSA PRIVATE KEY-----\n";
+    }
+
+    /**
      * Returns a string with the authorized Public Key.
      *
      * @return String with the authorized Public Key

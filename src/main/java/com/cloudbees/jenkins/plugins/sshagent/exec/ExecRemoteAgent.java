@@ -163,7 +163,7 @@ public class ExecRemoteAgent implements RemoteAgent {
         //       suffix = ".bat";
         //       script = "@ECHO %SSH_PASSPHRASE%\nDEL \"" + askpass.getAbsolutePath() + "\"\n";
         
-        FilePath askpass = temp.createTextTempFile("askpass_", ".sh", "#!/bin/sh\necho $SSH_PASSPHRASE\nrm $0\n");
+        FilePath askpass = temp.createTextTempFile("askpass_", ".sh", "#!/bin/sh\necho \"$SSH_PASSPHRASE\"\nrm \"$0\"\n");
 
         // executable only for a current user
         askpass.chmod(0700);
