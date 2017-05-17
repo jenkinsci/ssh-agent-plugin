@@ -56,7 +56,7 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
         try {             
-            int status = launcher.launch().cmds("ssh-agent", "-k").quiet(true).start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
+            int status = launcher.launch().cmds("ssh-agent", "-k").envs("SSH_AGENT_PID=").quiet(true).start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
             /* 
              * `ssh-agent -k` returns 0 if terminates running agent or 1 if
              * it fails to terminate it. On Linux, 
