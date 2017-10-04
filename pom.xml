@@ -38,6 +38,7 @@
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
+  <description>This plugin allows you to provide SSH credentials to builds via a ssh-agent in Jenkins</description>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/SSH+Agent+Plugin</url>
   <licenses>
     <license>
