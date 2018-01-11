@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.21</version>
+    <version>3.2</version>
     <relativePath />
   </parent>
 
@@ -55,10 +55,6 @@
     </developer>
   </developers>
 
-  <prerequisites>
-    <maven>2.2.1</maven>
-  </prerequisites>
-
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
@@ -67,21 +63,21 @@
   </scm>
 
   <properties>
-    <jenkins.version>1.609.3</jenkins.version>
-    <java.level>7</java.level> <!-- sshd-core is 7+ -->
+    <jenkins.version>2.7.3</jenkins.version>
+    <java.level>7</java.level>
     <workflow-jenkins-plugin.version>1.14.2</workflow-jenkins-plugin.version>
   </properties>
 
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
   <pluginRepositories>
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
 
@@ -100,13 +96,13 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.7</version>
+      <version>1.7.25</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
-      <version>1.7.7</version>
+      <version>1.7.25</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -161,6 +157,13 @@
       <artifactId>workflow-cps</artifactId>
       <version>${workflow-jenkins-plugin.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <!-- Provided by the core -->
+          <groupId>org.jenkins-ci.ui</groupId>
+          <artifactId>jquery-detached</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -169,19 +172,6 @@
       <classifier>tests</classifier>
       <scope>test</scope>
      </dependency>
-    <dependency> <!-- TODO Jenkins sshd (1.6) depends on sshd-core 0.8, which is incompatible with 1.0 -->
-      <groupId>org.jenkins-ci.main</groupId>
-      <artifactId>jenkins-war</artifactId>
-      <version>${jenkins.version}</version>
-      <classifier>war-for-test</classifier>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jenkins-ci.modules</groupId>
-          <artifactId>sshd</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
   </dependencies>
 
   <build>
