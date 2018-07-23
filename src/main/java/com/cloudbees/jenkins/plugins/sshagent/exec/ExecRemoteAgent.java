@@ -105,7 +105,11 @@ public class ExecRemoteAgent implements RemoteAgent {
                     env.put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
                     env.put("SSH_ASKPASS", askpass.getRemote());
                 }
-                if (launcher.launch().cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
+                
+                // as the next command is in quiet mode, we just add a message to the log
+                launcher.getListener().getLogger().println("Running ssh-add (command line suppressed)");
+                
+                if (launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
                     throw new AbortException("Failed to run ssh-add");
                 }
             } finally {

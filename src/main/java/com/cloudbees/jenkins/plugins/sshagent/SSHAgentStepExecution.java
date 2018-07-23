@@ -63,7 +63,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         initRemoteAgent();
         context.newBodyInvoker().
                 withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(this))).
-                withCallback(new Callback(this)).withDisplayName(null).start();
+                withCallback(new Callback(this)).start();
         return false;
     }
 

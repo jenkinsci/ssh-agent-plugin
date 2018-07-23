@@ -5,10 +5,10 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import com.cloudbees.plugins.credentials.domains.Domain;
-import hudson.Util;
+import hudson.Launcher;
 import hudson.model.Fingerprint;
-import hudson.util.Secret;
+import hudson.util.StreamTaskListener;
+import java.io.IOException;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -26,14 +26,17 @@ import org.jvnet.hudson.test.RestartableJenkinsRule;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Matcher;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
+import org.jenkinsci.plugins.docker.commons.tools.DockerTool;
+import org.jenkinsci.plugins.docker.workflow.client.DockerClient;
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
@@ -191,4 +194,41 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             }
         });
     }
+
+    @Issue("SECURITY-704")
+    @Test
+    public void sshAgentDocker() throws Exception {
+        story.then(r -> {
+            // From org.jenkinsci.plugins.docker.workflow.DockerTestUtil:
+            Launcher.LocalLauncher localLauncher = new Launcher.LocalLauncher(StreamTaskListener.NULL);
+            try {
+                assumeThat("Docker working", localLauncher.launch().cmds(DockerTool.getExecutable(null, null, null, null), "ps").start().joinWithTimeout(DockerClient.CLIENT_TIMEOUT, TimeUnit.SECONDS, localLauncher.getListener()), is(0));
+            } catch (IOException x) {
+                assumeNoException("have Docker installed", x);
+            }
+
+            List<String> credentialIds = new ArrayList<String>();
+            credentialIds.add(CREDENTIAL_ID);
+
+            SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "x",
+                    new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+            SystemCredentialsProvider.getInstance().getCredentials().add(key);
+            SystemCredentialsProvider.getInstance().save();
+
+            WorkflowJob job = r.createProject(WorkflowJob.class, "sshAgentDocker");
+            job.setDefinition(new CpsFlowDefinition(""
+                + "node('" + r.createSlave().getNodeName() + "') {\n"
+                + "  withDockerContainer('kroniak/ssh-client') {\n"
+                + "    sh 'ssh-agent -k || :'\n"
+                + "    sshagent(credentials: ['" + CREDENTIAL_ID + "']) {\n"
+                + "      sh 'env'\n"
+                + "    }\n"
+                + "  }\n"
+                + "}\n", true)
+            );
+            WorkflowRun b = r.buildAndAssertSuccess(job);
+            r.assertLogNotContains("cloudbees", b);
+        });
+    }
+
 }
