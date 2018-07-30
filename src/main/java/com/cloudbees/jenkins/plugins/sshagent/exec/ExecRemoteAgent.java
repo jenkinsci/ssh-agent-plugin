@@ -102,7 +102,7 @@ public class ExecRemoteAgent implements RemoteAgent {
                 Map<String,String> env = new HashMap<>(agentEnv);
                 if (passphrase != null) {
                     env.put("SSH_PASSPHRASE", passphrase);
-                    env.put("DISPLAY", ":0"); // just to force using SSH_ASKPASS
+                    env.put("DISPLAY", "bogus"); // just to force using SSH_ASKPASS
                     env.put("SSH_ASKPASS", askpass.getRemote());
                 }
                 
