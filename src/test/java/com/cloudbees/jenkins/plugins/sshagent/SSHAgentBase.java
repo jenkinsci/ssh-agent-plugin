@@ -13,7 +13,6 @@ import org.apache.sshd.server.CommandFactory;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
-import org.apache.sshd.server.command.UnknownCommand;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.session.SessionFactory;
@@ -37,6 +36,35 @@ public class SSHAgentBase {
     private SshServer sshd = null;
 
     private int assignedPort = SSH_SERVER_INITIAL_PORT.getAndIncrement();
+
+    public String KEY_WITHOUT_PASSWORD_AND_NO_NEWLINE =
+            "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
+            "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn\n" +
+            "NhAAAAAwEAAQAAAQEA10YserX1KtStyG4F2DKimHYMGFPIcYFIgcA7Qacau7Jj0+bOcQoO\n" +
+            "wur3WCIrQ34CzkW1oXsgrh4DhK8MqIdhgJvONnYuQYyVbMPloMS1HDNIJFDNOjyXTOyPYQ\n" +
+            "bs/LMWTOynKLHt/NkEjVsIOXE0BYS82a/IoOTrUmHOjzwI80eBol/d2pKGS3BWjJl2W2vE\n" +
+            "Haoa/s7K5grYH8agCCU181cbc9DC7HEw5N+2bZ0VZylzjr8v2u4WbpoCr06Jvpkr9JKuoV\n" +
+            "TZVL9kPY5jR6f0Xy1OcXN2jdAZ4p0V8e8mk36l8IQmR34G4RvgfD6TFmb8FAQ7GpMbFchn\n" +
+            "RHhkKPp9NwAAA9AUSo+lFEqPpQAAAAdzc2gtcnNhAAABAQDXRix6tfUq1K3IbgXYMqKYdg\n" +
+            "wYU8hxgUiBwDtBpxq7smPT5s5xCg7C6vdYIitDfgLORbWheyCuHgOErwyoh2GAm842di5B\n" +
+            "jJVsw+WgxLUcM0gkUM06PJdM7I9hBuz8sxZM7Kcose382QSNWwg5cTQFhLzZr8ig5OtSYc\n" +
+            "6PPAjzR4GiX93akoZLcFaMmXZba8Qdqhr+zsrmCtgfxqAIJTXzVxtz0MLscTDk37ZtnRVn\n" +
+            "KXOOvy/a7hZumgKvTom+mSv0kq6hVNlUv2Q9jmNHp/RfLU5xc3aN0BninRXx7yaTfqXwhC\n" +
+            "ZHfgbhG+B8PpMWZvwUBDsakxsVyGdEeGQo+n03AAAAAwEAAQAAAQAJR4wZSgikbQCEuEFm\n" +
+            "PWCG4+fHkKz+P41pkmi7fsGHP7xP4Q4bD0ztmAVLdkWZJjBmxdh7enxBJSgPqyAHj7ZjPd\n" +
+            "QYwuVhi/bQ9mzKjlAkRA2jCxydmwkGltfjXdIPXoTikfzuoyTYFl683SSwnTGZ30voskwa\n" +
+            "q2N9bJvjzrmwCtvMQ2WlXuU5BD9fk4wgE1n9PQ/J9m9kRzlMEMnuvT6hNKn81aJgqzmHdX\n" +
+            "LqOtOps+Q+ghL9isI6qXIqFbbvSc2MEnPz4+t3Ru6L56X7aLcreHEMEOuHmD8hppnKcXZV\n" +
+            "hb5YpvJ0jcIlSnL0s4EFDcJPWmtCpxxGQqxY2aXCo3zJAAAAgHEjluyO49RBnqX0zZagfw\n" +
+            "YYo6s/TzdP45WgXVrWIOHsLNYxRJfna8zi5DMpFfK3BQYpeni3ysXkgpJgcqfkHyqOZe4W\n" +
+            "ok2i1mLWY7/fwiGl722U31W1nFUK1062shJx6JtIYDrovvCIkEHYhPpc+H99niqZidGqQK\n" +
+            "QXxu5EIFdzAAAAgQDwCl1wOHbOmvLh6IwgQLytebo2SZX0VnDhjM7F82AHfPBrdLFyuKg5\n" +
+            "OPSbOFKUwrjP476y6o0b0m5BVY/4afkB+nO6WEaZKTtIuwj2I9XhhJT1WWzMcZ8x03YwtJ\n" +
+            "nq1HKyDyfAne+D1zdF6vvFaCvT/Iw223A8N7CObSkt2bSY1QAAAIEA5ZZFIeV656KVKZ+1\n" +
+            "pMvNQkP3aY3IQbL6VIUvrHOh/NpT6Wd1p4gwExE7ohQ9Aors+VuXJJ6prS7Smfk+4hJ/SL\n" +
+            "VXOggAoB4/4xGXeEfqID+ryMgaRmHOm/K4wLdIqE9OTEn/9J1NvwY23Si8Kw8IYHJie/LN\n" +
+            "D38g8c354keMQ9sAAAAVdGVzdGtleS1uby1wYXNzcGhyYXNlAQIDBAUG\n"+
+            "-----END OPENSSH PRIVATE KEY-----";
 
     protected void startMockSSHServer() throws Exception {
         File hostKey = new File(System.getProperty("java.io.tmpdir") + "/key.ser");
@@ -100,12 +128,6 @@ public class SSHAgentBase {
                 };
             }
         });
-        sshd.setCommandFactory(new CommandFactory() {
-            @Override
-            public Command createCommand(String s) {
-                return new UnknownCommand(s);
-            }
-        });
 
         sshd.setPublickeyAuthenticator(new PublickeyAuthenticator() {
             @Override
@@ -142,7 +164,6 @@ public class SSHAgentBase {
             }
 
         });
-        sshd.setSessionFactory(new SessionFactory());
 
         sshd.start();
         System.out.println("Mock SSH Server is started using the port " + getAssignedPort());
@@ -214,7 +235,7 @@ public class SSHAgentBase {
                 + "E0IhuacLwNdvnCTInPiihClRxaGI+gGRyZdiTKgrhdpSGS8mqdoc4/H2HDScdbzM\n"
                 + "8g1TsUTEQPmlO9swV76cYwun+tdsEZMxwuVqIP7MMQSTZGXreVOb1jCi9fTniW5y\n"
                 + "eEbGhq44GcZ6mt4w7ANJC7KDSDVcJP58O65c7W9MnYurnBTIftDTEdoksg+psXdA\n"
-                + "-----END RSA PRIVATE KEY-----\n";
+                + "-----END RSA PRIVATE KEY-----";
     }
 
     /**
@@ -285,7 +306,8 @@ public class SSHAgentBase {
      * @return String with the authorized Public Key
      */
     public String getAuthorizedPublicKey() {
-        return  "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDB+TU0nnxVKh+m4zV2DhPm8SM5dBWQW2maU2VQp/sKHdgMuGep422eKbNfm9u82kyh1gImJzQVFQaWX+h+SewxiT9Xm7yD4D2RYXuIXgxp5x5WBpQBIHcWgV9v/a+O0cIUnDJYCh5j3O2RT4CpqnrseRrcVoMFSI+sdSAseYC2CKFAIua1x4cUykEH0kE/vkt4WPDJCb7+mIhNpjJEhHW7etsSCcA+vKxux3Kw0TuMNb/o/jL631R7NrU5jo3LzjjgD2FX6wolkYEp9F7YWaXZY4BvopObAGe52aj20Oay7L6uxiFUq/NTOMrT5trJBY3LNOSJuFr+UWGuUSulwj6qR++Io5pTyHjJLaw+s+dXdOArFAeum5bbxhGcLa18eSFYM761wA4KLdVbwd1nXoIG3+wTSO1EQCbArqc7UIhQYKI/WYDpNROdKOTyIpIYXjHz4SZBYXOn9zXJGvgnPpuHoefkT2RB5ryrfr1GFmoV2Bd/i32KIdtiDVqzCZHp9y4ZLlxz3+beMA19dNGbdYgUuanzQuAqeDNK2AcAd0IcnSrmijrxs3oNPbKr1wX2cYdD01m8jhNEn1+JCRAYghI9VsUVeEfuydA942M9gAjIiMGp7L7j09+YaJ0KH3BH8ZVJl20ojjIEa5GkOLo4IK/DMflkgG/qupG2u94o77LaIQ== cloudbees@localhost";
+        return  "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDB+TU0nnxVKh+m4zV2DhPm8SM5dBWQW2maU2VQp/sKHdgMuGep422eKbNfm9u82kyh1gImJzQVFQaWX+h+SewxiT9Xm7yD4D2RYXuIXgxp5x5WBpQBIHcWgV9v/a+O0cIUnDJYCh5j3O2RT4CpqnrseRrcVoMFSI+sdSAseYC2CKFAIua1x4cUykEH0kE/vkt4WPDJCb7+mIhNpjJEhHW7etsSCcA+vKxux3Kw0TuMNb/o/jL631R7NrU5jo3LzjjgD2FX6wolkYEp9F7YWaXZY4BvopObAGe52aj20Oay7L6uxiFUq/NTOMrT5trJBY3LNOSJuFr+UWGuUSulwj6qR++Io5pTyHjJLaw+s+dXdOArFAeum5bbxhGcLa18eSFYM761wA4KLdVbwd1nXoIG3+wTSO1EQCbArqc7UIhQYKI/WYDpNROdKOTyIpIYXjHz4SZBYXOn9zXJGvgnPpuHoefkT2RB5ryrfr1GFmoV2Bd/i32KIdtiDVqzCZHp9y4ZLlxz3+beMA19dNGbdYgUuanzQuAqeDNK2AcAd0IcnSrmijrxs3oNPbKr1wX2cYdD01m8jhNEn1+JCRAYghI9VsUVeEfuydA942M9gAjIiMGp7L7j09+YaJ0KH3BH8ZVJl20ojjIEa5GkOLo4IK/DMflkgG/qupG2u94o77LaIQ== cloudbees@localhost\n" +
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDXRix6tfUq1K3IbgXYMqKYdgwYU8hxgUiBwDtBpxq7smPT5s5xCg7C6vdYIitDfgLORbWheyCuHgOErwyoh2GAm842di5BjJVsw+WgxLUcM0gkUM06PJdM7I9hBuz8sxZM7Kcose382QSNWwg5cTQFhLzZr8ig5OtSYc6PPAjzR4GiX93akoZLcFaMmXZba8Qdqhr+zsrmCtgfxqAIJTXzVxtz0MLscTDk37ZtnRVnKXOOvy/a7hZumgKvTom+mSv0kq6hVNlUv2Q9jmNHp/RfLU5xc3aN0BninRXx7yaTfqXwhCZHfgbhG+B8PpMWZvwUBDsakxsVyGdEeGQo+n03 testkey-no-passphrase";
     }
 
     /**

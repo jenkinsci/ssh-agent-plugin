@@ -42,7 +42,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
-                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(KEY_WITHOUT_PASSWORD_AND_NO_NEWLINE), "", "test");
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 
@@ -121,7 +121,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
-        r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
+        r.assertLogContains("Permission denied (keyboard-interactive,publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
 
         stopMockSSHServer();
     }
