@@ -30,6 +30,7 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.TaskListener;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 /**
  * Extension point for ssh-agent providers.
@@ -52,7 +53,7 @@ public abstract class RemoteAgentFactory implements ExtensionPoint {
     public abstract boolean isSupported(Launcher launcher, TaskListener listener);
 
     @Deprecated
-    public RemoteAgent start(Launcher launcher, TaskListener listener) throws Throwable {
+    public RemoteAgent start(@Nonnull Launcher launcher, TaskListener listener) throws Throwable {
         return start(launcher, listener, null);
     }
 
@@ -65,7 +66,7 @@ public abstract class RemoteAgentFactory implements ExtensionPoint {
      * @return the agent.
      * @throws Throwable if the agent cannot be started.
      */
-    public /*abstract*/ RemoteAgent start(Launcher launcher, TaskListener listener, @CheckForNull FilePath temp) throws Throwable {
+    public /*abstract*/ RemoteAgent start(@Nonnull Launcher launcher, TaskListener listener, @CheckForNull FilePath temp) throws Throwable {
         if (Util.isOverridden(RemoteAgentFactory.class, getClass(), "start", Launcher.class, TaskListener.class)) {
             return start(launcher, listener);
         } else {

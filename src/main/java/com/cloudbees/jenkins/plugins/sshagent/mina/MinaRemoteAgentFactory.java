@@ -36,6 +36,8 @@ import hudson.model.TaskListener;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A factory that uses the Apache Mina/SSH library support to (semi-)natively provide a ssh-agent implementation
  */
@@ -54,7 +56,11 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
+    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+        }
         try {
             return launcher.getChannel().call(new TomcatNativeInstalled(listener));
         } catch (Throwable throwable) {
@@ -66,7 +72,12 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
+    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+        }
+
         RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
         
         // TODO temp directory currently ignored

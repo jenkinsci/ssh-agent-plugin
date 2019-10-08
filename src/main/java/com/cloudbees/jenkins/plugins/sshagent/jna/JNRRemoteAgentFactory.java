@@ -28,6 +28,7 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -52,7 +53,11 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
+    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+        }
         return launcher.isUnix();
     }
 
@@ -60,7 +65,11 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
+    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+        }
         RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
 
         return launcher.getChannel().call(new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
