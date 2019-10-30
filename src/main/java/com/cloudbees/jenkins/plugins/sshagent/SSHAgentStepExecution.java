@@ -88,9 +88,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    // TODO use 1.652 use WorkspaceList.tempDir
     static FilePath tempDir(FilePath ws) {
-        return ws.sibling(ws.getName() + System.getProperty(WorkspaceList.class.getName(), "@") + "tmp");
+        return WorkspaceList.tempDir(ws);
     }
 
     private static class Callback extends BodyExecutionCallback.TailCall {
