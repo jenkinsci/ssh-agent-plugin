@@ -7,6 +7,7 @@ import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import hudson.Launcher;
 import hudson.model.Fingerprint;
+import hudson.slaves.DumbSlave;
 import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -151,6 +152,45 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             }
         });
 
+    }
+
+    /**
+     * This test verifies that sshAgent step handles that the build agent
+     * disconnects and reconnects during the step execution.
+     */
+    @Issue("JENKINS-59259")
+    @Test
+    public void agentConnectionDropTest() throws Exception {
+        story.then(r -> {
+            List<String> credentialIds = new ArrayList<String>();
+            credentialIds.add(CREDENTIAL_ID);
+            SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                    new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+            SystemCredentialsProvider.getInstance().getCredentials().add(key);
+            SystemCredentialsProvider.getInstance().save();
+
+            DumbSlave agent = r.createSlave(true);
+            WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+            job.setDefinition(new CpsFlowDefinition(""
+                    + "node('" + agent.getNodeName() + "') {\n"
+                    + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
+                    + "    semaphore 'upAndRunning'\n"
+                    + "  }\n"
+                    + "}\n", true)
+            );
+
+            WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+
+            SemaphoreStep.waitForStart("upAndRunning/1", run);
+
+            r.disconnectSlave(agent);
+            r.waitOnline(agent);
+
+            SemaphoreStep.success("upAndRunning/1", null);
+
+            r.waitForCompletion(run);
+            r.assertBuildStatusSuccess(run);
+        });
     }
 
     @Issue("JENKINS-38830")
