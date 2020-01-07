@@ -7,7 +7,7 @@ ssh-agent in Jenkins.
 
 Currently all **Windows** nodes (including the master) on which this
 plugin will be used must have the [Apache Tomcat Native
-libraries](http://tomcat.apache.org/native-doc/){.external-link}
+libraries](http://tomcat.apache.org/native-doc/)
 installed. As of 1.0 should be unnecessary for Unix nodes. As of 1.14
 unnecessary if `ssh-agent` is installed.
 
@@ -17,20 +17,17 @@ First you need to add some SSH Credentials to your instance:
 
 Jenkins \| Manage Jenkins \| Manage Credentials
 
-![](docs/images/Screen_Shot_2012-10-26_at_12.25.04.png){.confluence-embedded-image
-.confluence-content-image-border}
+![](docs/images/Screen_Shot_2012-10-26_at_12.25.04.png)
 
 Note that only Private Key based credentials can be used.
 
 Then configure your build to use the credentials:
 
-![](docs/images/Screen_Shot_2012-10-26_at_12.26.13.png){.confluence-embedded-image
-.confluence-content-image-border}
+![](docs/images/Screen_Shot_2012-10-26_at_12.26.13.png)
 
 And then your build will have those credentials available, e.g.
 
-![](docs/images/Screen_Shot_2012-10-26_at_11.54.21.png){.confluence-embedded-image
-.confluence-content-image-border}
+![](docs/images/Screen_Shot_2012-10-26_at_11.54.21.png)
 
 From a Pipeline job, use the `sshagent` step.
 

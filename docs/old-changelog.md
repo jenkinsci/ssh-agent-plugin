@@ -8,11 +8,11 @@ For new versions, see [GitHub releases](https://github.com/jenkinsci/ssh-agent-p
 ### Version 1.16 (2018-07-30)
 
 -   [Fix security
-    issue](https://jenkins.io/security/advisory/2018-07-30/#SECURITY-704){.external-link}
+    issue](https://jenkins.io/security/advisory/2018-07-30/#SECURITY-704)
 
 ### Version 1.15 (2017-04-06)
 
--   [issue@42093](#){.unresolved} Fixed quoting for askpass in
+-   [issue@42093](#) Fixed quoting for askpass in
     command-line implementation. 
 
 ### Version 1.14 (2017-02-10)
@@ -20,7 +20,7 @@ For new versions, see [GitHub releases](https://github.com/jenkinsci/ssh-agent-p
 -   [JENKINS-36997](https://issues.jenkins-ci.org/browse/JENKINS-36997)
     New default implementation that uses command-line `ssh-agent`.
     Should fix various problems with crypto APIs,
-    `docker.image(…).inside {sshagent(…) {…`}}, etc.
+    `docker.image(…).inside {sshagent(…) {…}}`, etc.
 -   [JENKINS-38830](https://issues.jenkins-ci.org/browse/JENKINS-38830)
     Track credentials used in the wrapper.
 -   [JENKINS-35563](https://issues.jenkins-ci.org/browse/JENKINS-35563)
@@ -43,7 +43,7 @@ Apparently does not work in some versions of Jenkins; see
 
 -   [JENKINS-35463](https://issues.jenkins-ci.org/browse/JENKINS-35463)
     First release using
-    [bouncycastle-api-plugin](https://wiki.jenkins-ci.org/display/JENKINS/Bouncy+Castle+API+Plugin){.external-link}
+    [bouncycastle-api-plugin](https://wiki.jenkins-ci.org/display/JENKINS/Bouncy+Castle+API+Plugin)
 
 ### Version 1.10 (2016-03-03)
 
@@ -58,13 +58,13 @@ Changelog unrecorded.
 ### Version 1.8 (2015-08-07)
 
 -   Compatible with
-    [Workflow](https://wiki.jenkins-ci.org/display/JENKINS/Workflow+Plugin){.external-link} (issue
-    [\#28689](https://issues.jenkins-ci.org/browse/JENKINS-28689){.external-link})
+    [Workflow](https://wiki.jenkins-ci.org/display/JENKINS/Workflow+Plugin) (issue
+    [\#28689](https://issues.jenkins-ci.org/browse/JENKINS-28689))
 
 ### Version 1.7 (2015-06-02)
 
 -   Fixed a socket and thread leak ([issue
-    \#27555](https://issues.jenkins-ci.org/browse/JENKINS-27555){.external-link})
+    \#27555](https://issues.jenkins-ci.org/browse/JENKINS-27555))
 
 ### Version 1.6 (2015-04-20)
 
@@ -78,7 +78,7 @@ Changelog unrecorded.
 ### Version 1.4.2 (2014-08-11)
 
 -   Fix for
-    [JENKINS-20276](https://issues.jenkins-ci.org/browse/JENKINS-20276){.external-link}
+    [JENKINS-20276](https://issues.jenkins-ci.org/browse/JENKINS-20276)
 -   **WARNING: Due to classpath conflicts, this plugin will not work if
     1.518 \<= Jenkins Version \< 1.533 (i.e. 1.518 broke it, 1.533 fixed
     it)**
@@ -104,7 +104,7 @@ Changelog unrecorded.
 ### Version 1.3 (2013-08-09)
 
 -   Set-up SSH Agent before SCM checkout, this way [GIT can use the ssh
-    agent](https://issues.jenkins-ci.org/browse/JENKINS-12492){.external-link}.
+    agent](https://issues.jenkins-ci.org/browse/JENKINS-12492).
     (Contributed by Patric Boos)
 -   Upgrade to [SSH Credentials
     1.3](https://wiki.jenkins.io/display/JENKINS/SSH+Credentials+Plugin)
