@@ -20,7 +20,6 @@ package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jnr.enxio.channels.NativeSelectorProvider;
-import jnr.posix.POSIXFactory;
 import jnr.unixsocket.UnixServerSocket;
 import jnr.unixsocket.UnixServerSocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
@@ -37,6 +36,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -76,7 +79,8 @@ public class AgentServer {
 
     public String start() throws Exception {
         authSocket = createLocalSocketAddress();
-        address = new UnixSocketAddress(new File(authSocket));
+        final File file = new File(authSocket);
+        address = new UnixSocketAddress(file);
         channel = UnixServerSocketChannel.open();
         channel.configureBlocking(false);
         socket = channel.socket();
@@ -85,8 +89,12 @@ public class AgentServer {
 
         channel.register(selector, SelectionKey.OP_ACCEPT, new SshAgentServerSocketHandler());
 
-        POSIXFactory.getPOSIX().chmod(authSocket, 0600);
-        if (!new File(authSocket).exists()) {
+
+        final EnumSet<PosixFilePermission> permissions = EnumSet.noneOf(PosixFilePermission.class);
+        permissions.add(PosixFilePermission.OWNER_READ);
+        permissions.add(PosixFilePermission.OWNER_WRITE);
+        Files.setPosixFilePermissions(file.toPath(), permissions);
+        if (!file.exists()) {
             throw new IllegalStateException("failed to create " + authSocket + " of length " + authSocket.length() + " (check UNIX_PATH_MAX)");
         }
 
