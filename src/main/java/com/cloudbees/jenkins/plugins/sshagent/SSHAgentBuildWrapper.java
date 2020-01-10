@@ -305,6 +305,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         private final RemoteAgent agent;
 
+        private final Launcher launcher;
+
+        private final BuildListener listener;
+
         /**
          * Construct the environment and initialize on the remote node.
          *
@@ -354,6 +358,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         public SSHAgentEnvironment(Launcher launcher, BuildListener listener, @CheckForNull FilePath workspace) throws Throwable {
             RemoteAgent agent = null;
+            this.launcher = launcher;
+            this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
             for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
@@ -395,7 +401,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             final Secret passphrase = key.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : key.getPrivateKeys()) {
-                agent.addIdentity(privateKey, effectivePassphrase, description(key));
+                agent.addIdentity(privateKey, effectivePassphrase, description(key), launcher, listener);
             }
         }
 
@@ -414,7 +420,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         public boolean tearDown(AbstractBuild build, BuildListener listener)
                 throws IOException, InterruptedException {
             if (agent != null) {
-                agent.stop();
+                agent.stop(launcher, listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
             return true;
