@@ -24,6 +24,7 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import hudson.Extension;
@@ -78,7 +79,8 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        return new ExecRemoteAgent(launcher, listener, temp);
+    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
+            throws Throwable {
+        return new ExecRemoteAgent(launcherProvider, listener, temp);
     }
 }

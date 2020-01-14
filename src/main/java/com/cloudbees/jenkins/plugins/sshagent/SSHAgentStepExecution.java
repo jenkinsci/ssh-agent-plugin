@@ -21,7 +21,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 
-public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
+public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements LauncherProvider {
 
     private static final long serialVersionUID = 1L;
 
@@ -70,7 +70,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @Override
     public void stop(Throwable cause) throws Exception {
         if (agent != null) {
-            agent.stop(getContext().get(Launcher.class), listener);
+            agent.stop(listener);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
         }
         purgeSockets();
@@ -153,7 +153,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             if (factory.isSupported(launcher, listener)) {
                 try {
                     listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                    agent = factory.start(launcher, listener, tempDir(workspace));
+                    agent = factory.start(this, listener, tempDir(workspace));
                     break;
                 } catch (Throwable t) {
                     faults.put(factory.getDisplayName(), t);
@@ -179,7 +179,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : userPrivateKey.getPrivateKeys()) {
                 agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey),
-                        launcher, listener);
+                        listener);
             }
         }
 
@@ -195,7 +195,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         try {
             TaskListener listener = getContext().get(TaskListener.class);
             if (agent != null) {
-                agent.stop(getContext().get(Launcher.class), listener);
+                agent.stop(listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
         } finally {
@@ -227,6 +227,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      */
     @CheckReturnValue private String getSocket() {
         return socket;
+    }
+
+    @Override
+    public Launcher getLauncher() throws IOException, InterruptedException {
+        return getContext().get(Launcher.class);
     }
 
 }

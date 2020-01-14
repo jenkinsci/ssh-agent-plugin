@@ -28,6 +28,7 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -66,11 +67,12 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
+    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
+            throws Throwable {
+        RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
         
         // TODO temp directory currently ignored
-        return launcher.getChannel().call(new MinaRemoteAgentStarter(listener));
+        return launcherProvider.getLauncher().getChannel().call(new MinaRemoteAgentStarter(listener));
     }
 
     private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {

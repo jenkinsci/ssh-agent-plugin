@@ -70,7 +70,7 @@ public class JNRRemoteAgent implements RemoteAgent {
     /**
      * {@inheritDoc}
      */
-    public void addIdentity(String privateKey, final String passphrase, String comment, Launcher launcher,
+    public void addIdentity(String privateKey, final String passphrase, String comment,
                             TaskListener listener) throws IOException {
         try {
             KeyPair keyPair = PEMEncodable.decode(privateKey, passphrase == null ? null : passphrase.toCharArray()).toKeyPair();
@@ -84,7 +84,7 @@ public class JNRRemoteAgent implements RemoteAgent {
     /**
      * {@inheritDoc}
      */
-    public void stop(Launcher launcher, TaskListener listener) {
+    public void stop(TaskListener listener) {
         agent.close();
     }
 }
