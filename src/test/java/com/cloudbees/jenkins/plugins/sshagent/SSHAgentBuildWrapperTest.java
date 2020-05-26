@@ -121,7 +121,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
-        r.assertLogContains("Permission denied (publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
+        r.assertLogContains("Permission denied (keyboard-interactive,publickey).", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
 
         stopMockSSHServer();
     }
