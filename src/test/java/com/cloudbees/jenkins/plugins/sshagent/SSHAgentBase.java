@@ -13,10 +13,9 @@ import org.apache.sshd.server.CommandFactory;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
-import org.apache.sshd.server.command.UnknownCommand;
+import org.apache.sshd.server.scp.UnknownCommand;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.session.SessionFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -142,7 +141,6 @@ public class SSHAgentBase {
             }
 
         });
-        sshd.setSessionFactory(new SessionFactory());
 
         sshd.start();
         System.out.println("Mock SSH Server is started using the port " + getAssignedPort());
