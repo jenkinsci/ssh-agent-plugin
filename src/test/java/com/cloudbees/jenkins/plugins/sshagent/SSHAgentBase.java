@@ -2,28 +2,27 @@ package com.cloudbees.jenkins.plugins.sshagent;
 
 import com.trilead.ssh2.crypto.Base64;
 import com.trilead.ssh2.packets.TypesWriter;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
-import org.apache.sshd.server.SshServer;
-import org.apache.sshd.common.Factory;
-import org.apache.sshd.server.Command;
-import org.apache.sshd.server.CommandFactory;
-import org.apache.sshd.server.Environment;
-import org.apache.sshd.server.ExitCallback;
-import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
-import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.session.SessionFactory;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringReader;
-import java.net.*;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+import org.apache.sshd.common.Factory;
+import org.apache.sshd.server.Command;
+import org.apache.sshd.server.Environment;
+import org.apache.sshd.server.ExitCallback;
+import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
+import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.session.ServerSession;
 
 public class SSHAgentBase {
 

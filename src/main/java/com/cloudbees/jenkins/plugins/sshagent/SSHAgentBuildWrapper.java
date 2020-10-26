@@ -305,6 +305,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         private final RemoteAgent agent;
 
+        private final Launcher launcher;
+
+        private final BuildListener listener;
+
         /**
          * Construct the environment and initialize on the remote node.
          *
@@ -354,13 +358,16 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         public SSHAgentEnvironment(Launcher launcher, BuildListener listener, @CheckForNull FilePath workspace) throws Throwable {
             RemoteAgent agent = null;
+            this.launcher = launcher;
+            this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
             for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                        agent = factory.start(launcher, listener, workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null);
+                        agent = factory.start(new SingletonLauncherProvider(launcher), listener,
+                                workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null);
                         break;
                     } catch (Throwable t) {
                         faults.put(factory.getDisplayName(), t);
@@ -395,7 +402,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             final Secret passphrase = key.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : key.getPrivateKeys()) {
-                agent.addIdentity(privateKey, effectivePassphrase, description(key));
+                agent.addIdentity(privateKey, effectivePassphrase, description(key), listener);
             }
         }
 
@@ -414,7 +421,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         public boolean tearDown(AbstractBuild build, BuildListener listener)
                 throws IOException, InterruptedException {
             if (agent != null) {
-                agent.stop();
+                agent.stop(listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
             return true;
@@ -505,5 +512,27 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     }
 
     private class NoOpEnvironment extends Environment {
+    }
+
+    /**
+     * Singleton implementation of the launcher provider. This implementation
+     * is safe to use in situations where the launcher is persistent through
+     * out the entire lifetime of the ssh agent.
+     *
+     * This implementation is NOT safe to use together with pipelines and other
+     * types of durable builds.
+     */
+    private static class SingletonLauncherProvider implements LauncherProvider {
+
+        private final Launcher launcher;
+
+        private SingletonLauncherProvider(Launcher launcher) {
+            this.launcher = launcher;
+        }
+
+        @Override
+        public Launcher getLauncher() throws IOException, InterruptedException {
+            return launcher;
+        }
     }
 }

@@ -24,10 +24,10 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
-
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
@@ -66,13 +66,17 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
-    public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        if (launcher == null){
+    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
+        throws Throwable {
+
+        if (launcherProvider.getLauncher() == null){
             throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
         }
-        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
 
-        return launcher.getChannel().call(new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
+        RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
+
+        return launcherProvider.getLauncher().getChannel().call(
+                new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
     }
 
 }

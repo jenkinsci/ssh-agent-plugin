@@ -1,0 +1,2 @@
+_extends: .github
+tag-template: ssh-agent-$NEXT_MINOR_VERSION

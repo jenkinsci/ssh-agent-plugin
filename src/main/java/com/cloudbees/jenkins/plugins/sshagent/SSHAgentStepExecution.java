@@ -21,7 +21,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 
-public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
+public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements LauncherProvider {
 
     private static final long serialVersionUID = 1L;
 
@@ -70,7 +70,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     @Override
     public void stop(Throwable cause) throws Exception {
         if (agent != null) {
-            agent.stop();
+            agent.stop(listener);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
         }
         purgeSockets();
@@ -88,9 +88,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    // TODO use 1.652 use WorkspaceList.tempDir
     static FilePath tempDir(FilePath ws) {
-        return ws.sibling(ws.getName() + System.getProperty(WorkspaceList.class.getName(), "@") + "tmp");
+        return WorkspaceList.tempDir(ws);
     }
 
     private static class Callback extends BodyExecutionCallback.TailCall {
@@ -154,7 +153,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             if (factory.isSupported(launcher, listener)) {
                 try {
                     listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                    agent = factory.start(launcher, listener, tempDir(workspace));
+                    agent = factory.start(this, listener, tempDir(workspace));
                     break;
                 } catch (Throwable t) {
                     faults.put(factory.getDisplayName(), t);
@@ -179,7 +178,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             final Secret passphrase = userPrivateKey.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : userPrivateKey.getPrivateKeys()) {
-                agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey));
+                agent.addIdentity(privateKey, effectivePassphrase, SSHAgentBuildWrapper.description(userPrivateKey),
+                        listener);
             }
         }
 
@@ -195,7 +195,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         try {
             TaskListener listener = getContext().get(TaskListener.class);
             if (agent != null) {
-                agent.stop();
+                agent.stop(listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
         } finally {
@@ -227,6 +227,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl {
      */
     @CheckReturnValue private String getSocket() {
         return socket;
+    }
+
+    @Override
+    public Launcher getLauncher() throws IOException, InterruptedException {
+        return getContext().get(Launcher.class);
     }
 
 }

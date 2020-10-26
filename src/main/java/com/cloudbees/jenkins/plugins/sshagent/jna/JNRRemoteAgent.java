@@ -26,6 +26,7 @@ package com.cloudbees.jenkins.plugins.sshagent.jna;
 
 import com.cloudbees.jenkins.plugins.sshagent.Messages;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
+import hudson.Launcher;
 import hudson.model.TaskListener;
 import jenkins.bouncycastle.api.PEMEncodable;
 
@@ -47,10 +48,6 @@ public class JNRRemoteAgent implements RemoteAgent {
      * The socket bound by the agent.
      */
     private final String socket;
-    /**
-     * The listener in case we need to report exceptions
-     */
-    private final TaskListener listener;
 
     /**
      * Constructor.
@@ -59,7 +56,6 @@ public class JNRRemoteAgent implements RemoteAgent {
      * @throws Exception if the agent could not start.
      */
     public JNRRemoteAgent(TaskListener listener, @CheckForNull File temp) throws Exception {
-        this.listener = listener;
         agent = new AgentServer(temp);
         socket = agent.start();
     }
@@ -74,7 +70,8 @@ public class JNRRemoteAgent implements RemoteAgent {
     /**
      * {@inheritDoc}
      */
-    public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException {
+    public void addIdentity(String privateKey, final String passphrase, String comment,
+                            TaskListener listener) throws IOException {
         try {
             KeyPair keyPair = PEMEncodable.decode(privateKey, passphrase == null ? null : passphrase.toCharArray()).toKeyPair();
             agent.getAgent().addIdentity(keyPair, comment);
@@ -87,7 +84,7 @@ public class JNRRemoteAgent implements RemoteAgent {
     /**
      * {@inheritDoc}
      */
-    public void stop() {
+    public void stop(TaskListener listener) {
         agent.close();
     }
 }

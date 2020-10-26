@@ -28,6 +28,7 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -73,15 +74,17 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
-    public RemoteAgent start(Launcher launcher, final TaskListener listener, FilePath temp) throws Throwable {
-        if (launcher == null){
+    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
+        throws Throwable {
+
+        if (launcherProvider.getLauncher() == null){
             throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
         }
 
-        RemoteHelper.registerBouncyCastle(launcher.getChannel(), listener);
-        
+        RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
+
         // TODO temp directory currently ignored
-        return launcher.getChannel().call(new MinaRemoteAgentStarter(listener));
+        return launcherProvider.getLauncher().getChannel().call(new MinaRemoteAgentStarter(listener));
     }
 
     private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {

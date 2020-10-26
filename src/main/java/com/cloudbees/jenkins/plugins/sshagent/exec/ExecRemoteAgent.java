@@ -24,10 +24,10 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.AbortException;
 import hudson.FilePath;
-import hudson.Launcher;
 import hudson.model.TaskListener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -44,13 +44,6 @@ public class ExecRemoteAgent implements RemoteAgent {
     private static final String AuthSocketVar = "SSH_AUTH_SOCK";
     private static final String AgentPidVar = "SSH_AGENT_PID";
     
-    private final Launcher launcher;
-    
-    /**
-     * The listener in case we need to report exceptions
-     */
-    private final TaskListener listener;
-
     private final FilePath temp;
     
     /**
@@ -61,16 +54,18 @@ public class ExecRemoteAgent implements RemoteAgent {
     /** Agent environment used for {@code ssh-add} and {@code ssh-agent -k}. */
     private final Map<String, String> agentEnv;
 
-    ExecRemoteAgent(Launcher launcher, TaskListener listener, FilePath temp) throws Exception {
-        this.launcher = launcher;
-        this.listener = listener;
+    private final LauncherProvider launcherProvider;
+
+    ExecRemoteAgent(LauncherProvider launcherProvider, TaskListener listener, FilePath temp) throws Exception {
         this.temp = temp;
+        this.launcherProvider = launcherProvider;
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if (launcher.launch().cmds("ssh-agent").stdout(baos).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
+        if (launcherProvider.getLauncher().launch().cmds("ssh-agent").stdout(baos).start()
+                .joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
             throw new AbortException("Failed to run ssh-agent");
         }
-        agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII)); // TODO could include local filenames, better to look up remote charset
+        agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII), listener); // TODO could include local filenames, better to look up remote charset
         
         if (agentEnv.containsKey(AuthSocketVar)) {
             socket = agentEnv.get(AuthSocketVar);
@@ -91,7 +86,8 @@ public class ExecRemoteAgent implements RemoteAgent {
      * {@inheritDoc}
      */
     @Override
-    public void addIdentity(String privateKey, final String passphrase, String comment) throws IOException, InterruptedException {
+    public void addIdentity(String privateKey, final String passphrase, String comment, TaskListener listener)
+            throws IOException, InterruptedException {
         FilePath keyFile = temp.createTextTempFile("private_key_", ".key", privateKey);
         try {
             keyFile.chmod(0600);
@@ -107,9 +103,10 @@ public class ExecRemoteAgent implements RemoteAgent {
                 }
                 
                 // as the next command is in quiet mode, we just add a message to the log
-                launcher.getListener().getLogger().println("Running ssh-add (command line suppressed)");
+                listener.getLogger().println("Running ssh-add (command line suppressed)");
                 
-                if (launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
+                if (launcherProvider.getLauncher().launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env)
+                        .stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
                     throw new AbortException("Failed to run ssh-add");
                 }
             } finally {
@@ -126,8 +123,9 @@ public class ExecRemoteAgent implements RemoteAgent {
      * {@inheritDoc}
      */
     @Override
-    public void stop() throws IOException, InterruptedException {
-        if (launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
+    public void stop(TaskListener listener) throws IOException, InterruptedException {
+        if (launcherProvider.getLauncher().launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener)
+                .start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
             throw new AbortException("Failed to run ssh-agent -k");
         }
     }
@@ -135,7 +133,7 @@ public class ExecRemoteAgent implements RemoteAgent {
     /**
      * Parses ssh-agent output.
      */
-    private Map<String,String> parseAgentEnv(String agentOutput) throws Exception{
+    private Map<String,String> parseAgentEnv(String agentOutput, TaskListener listener) throws Exception{
         Map<String, String> env = new HashMap<>();
         
         // get SSH_AUTH_SOCK
