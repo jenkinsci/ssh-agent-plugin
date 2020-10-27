@@ -179,6 +179,8 @@
   <build>
     <plugins>
       <plugin>
+        <!-- critical because sshd needs to be loaded first, otherwise will just bail out -->
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/dependencies-and-class-loading/ -->
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
         <extensions>true</extensions>
