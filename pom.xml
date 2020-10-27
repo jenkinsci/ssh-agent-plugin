@@ -167,7 +167,6 @@
         <configuration>
           <pluginFirstClassLoader>true</pluginFirstClassLoader>
           <compatibleSinceVersion>1.5</compatibleSinceVersion>
-          <minimumJavaVersion>${java.level}</minimumJavaVersion>
         </configuration>
       </plugin>
     </plugins>
