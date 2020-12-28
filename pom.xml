@@ -48,13 +48,6 @@
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>stephenconnolly</id>
-      <name>Stephen Connolly</name>
-    </developer>
-  </developers>
-
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
