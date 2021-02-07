@@ -29,12 +29,12 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>3.24</version>
+    <version>4.12</version>
     <relativePath />
   </parent>
 
   <artifactId>ssh-agent</artifactId>
-  <version>1.21-SNAPSHOT</version>
+  <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
@@ -48,24 +48,19 @@
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>stephenconnolly</id>
-      <name>Stephen Connolly</name>
-    </developer>
-  </developers>
-
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/ssh-agent-plugin</url>
-    <tag>HEAD</tag>
+    <tag>${scmTag}</tag>
   </scm>
 
   <properties>
-    <jenkins.version>2.60.3</jenkins.version>
+    <revision>1.21</revision>
+    <changelist>-SNAPSHOT</changelist>
+    <gitHubRepo>jenkinsci/ssh-agent-plugin</gitHubRepo>
+    <jenkins.version>2.222.4</jenkins.version>
     <java.level>8</java.level>
-    <workflow-support-plugin.version>2.18</workflow-support-plugin.version>
   </properties>
 
   <repositories>
@@ -86,7 +81,7 @@
     <dependency>
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-core</artifactId>
-      <version>1.3.0</version>
+      <version>1.7.0</version>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
@@ -101,19 +96,16 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-step-api</artifactId>
-      <version>2.16</version>
     </dependency>
 
     <!-- plugin dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.1.17</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-credentials</artifactId>
-      <version>1.14</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -124,44 +116,17 @@
     <!-- test dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-api</artifactId>
-      <version>2.27</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
-      <version>2.12.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-basic-steps</artifactId>
-      <version>2.8</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-durable-task-step</artifactId>
-      <version>2.19</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-cps</artifactId>
-      <version>2.45</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-support</artifactId>
-      <version>${workflow-support-plugin.version}</version>
-      <scope>test</scope>
-     </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-support</artifactId>
-      <version>${workflow-support-plugin.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
      </dependency>
@@ -175,26 +140,11 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>structs</artifactId>
-        <version>1.14</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci</groupId>
-        <artifactId>symbol-annotation</artifactId>
-        <version>1.14</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>script-security</artifactId>
-        <version>1.44</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>scm-api</artifactId>
-        <version>2.2.7</version>
-        <scope>test</scope>
+        <groupId>io.jenkins.tools.bom</groupId>
+        <artifactId>bom-2.222.x</artifactId>
+        <version>20</version>
+        <scope>import</scope>
+        <type>pom</type>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -202,6 +152,8 @@
   <build>
     <plugins>
       <plugin>
+        <!-- critical because sshd needs to be loaded first, otherwise will just bail out -->
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/dependencies-and-class-loading/ -->
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
         <extensions>true</extensions>
