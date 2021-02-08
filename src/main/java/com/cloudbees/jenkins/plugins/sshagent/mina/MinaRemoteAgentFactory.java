@@ -59,7 +59,7 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
     @Override
     @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
-        if (launcher == null){
+        if (launcher == null || launcher.getChannel() == null) {
             throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
         }
         try {
@@ -77,8 +77,8 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
         throws Throwable {
 
-        if (launcherProvider.getLauncher() == null){
-            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+        if (launcherProvider == null || launcherProvider.getLauncher() == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher provider. It should not happen");
         }
 
         RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
