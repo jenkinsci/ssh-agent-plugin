@@ -29,7 +29,6 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
 import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 
 /**
  * Extension point for ssh-agent providers.
@@ -60,7 +59,6 @@ public abstract class RemoteAgentFactory implements ExtensionPoint {
      * @return the agent.
      * @throws Throwable if the agent cannot be started.
      */
-
     public abstract RemoteAgent start(LauncherProvider launcherProvider, TaskListener listener,
                                       @CheckForNull FilePath temp) throws Throwable;
 }
