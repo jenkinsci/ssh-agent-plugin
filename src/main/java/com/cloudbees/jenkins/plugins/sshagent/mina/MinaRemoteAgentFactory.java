@@ -60,7 +60,7 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
     @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
         if (launcher == null || launcher.getChannel() == null) {
-            throw new IllegalStateException("RemoteLauncher has been initialized with Null channel. It should not happen");
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
         }
         try {
             return launcher.getChannel().call(new TomcatNativeInstalled(listener));
