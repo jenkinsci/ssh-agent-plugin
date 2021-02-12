@@ -24,20 +24,16 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.mina;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
-
-import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * A factory that uses the Apache Mina/SSH library support to (semi-)natively provide a ssh-agent implementation
@@ -57,7 +53,6 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
         if (launcher == null || launcher.getChannel() == null) {
             throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
@@ -73,7 +68,6 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
         throws Throwable {
 
