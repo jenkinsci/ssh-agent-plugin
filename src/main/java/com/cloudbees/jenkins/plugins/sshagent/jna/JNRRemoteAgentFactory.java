@@ -28,7 +28,6 @@ import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -53,7 +52,6 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
         if (launcher == null){
             throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
@@ -65,7 +63,6 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", justification = "We always require nonnull channel when we initialize this launcher")
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
         throws Throwable {
 
