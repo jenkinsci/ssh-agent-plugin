@@ -42,7 +42,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
-                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(KEY_WITHOUT_PASSWORD_AND_NO_NEWLINE), "", "test");
         SystemCredentialsProvider.getInstance().getCredentials().add(key);
         SystemCredentialsProvider.getInstance().save();
 

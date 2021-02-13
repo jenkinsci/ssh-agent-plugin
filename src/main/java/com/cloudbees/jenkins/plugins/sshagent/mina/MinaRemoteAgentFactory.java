@@ -24,16 +24,14 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.mina;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
-
-import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 
@@ -56,6 +54,9 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
+        if (launcher == null || launcher.getChannel() == null) {
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
+        }
         try {
             return launcher.getChannel().call(new TomcatNativeInstalled(listener));
         } catch (Throwable throwable) {
@@ -68,9 +69,14 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
-            throws Throwable {
+        throws Throwable {
+
+        if (launcherProvider == null || launcherProvider.getLauncher() == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher provider. It should not happen");
+        }
+
         RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
-        
+
         // TODO temp directory currently ignored
         return launcherProvider.getLauncher().getChannel().call(new MinaRemoteAgentStarter(listener));
     }

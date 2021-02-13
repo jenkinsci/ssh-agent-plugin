@@ -24,11 +24,10 @@
 
 package com.cloudbees.jenkins.plugins.sshagent.jna;
 
+import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteAgentFactory;
 import com.cloudbees.jenkins.plugins.sshagent.RemoteHelper;
-
-import com.cloudbees.jenkins.plugins.sshagent.LauncherProvider;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -54,6 +53,9 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
+        }
         return launcher.isUnix();
     }
 
@@ -62,7 +64,12 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
-            throws Throwable {
+        throws Throwable {
+
+        if (launcherProvider == null || launcherProvider.getLauncher() == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with a null launcher provider. It should not happen");
+        }
+
         RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
 
         return launcherProvider.getLauncher().getChannel().call(
