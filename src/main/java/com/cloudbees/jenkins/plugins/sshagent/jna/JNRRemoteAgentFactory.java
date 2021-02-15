@@ -32,6 +32,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 
 /**
  * A factory that uses the Apache Mina/SSH library support to natively provide a ssh-agent implementation on platforms
@@ -66,14 +67,18 @@ public class JNRRemoteAgentFactory extends RemoteAgentFactory {
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
         throws Throwable {
 
-        if (launcherProvider == null || launcherProvider.getLauncher() == null){
-            throw new IllegalStateException("RemoteLauncher has been initialized with a null launcher provider. It should not happen");
+        Launcher launcher = (launcherProvider == null) ? null : launcherProvider.getLauncher();
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with a null launcher. It should not happen");
         }
 
-        RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
+        VirtualChannel channel = launcher.getChannel();
+        if (channel == null) {
+            throw new IllegalStateException("RemoteLauncher has been initialized with null channel. It should not happen");
+        }
+        RemoteHelper.registerBouncyCastle(channel, listener);
 
-        return launcherProvider.getLauncher().getChannel().call(
-                new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
+        return channel.call(new JNRRemoteAgentStarter(listener, temp != null ? temp.getRemote() : null));
     }
 
 }
