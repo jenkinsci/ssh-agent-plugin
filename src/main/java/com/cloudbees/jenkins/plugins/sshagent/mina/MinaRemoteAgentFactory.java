@@ -32,6 +32,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.tomcat.jni.Library;
 
@@ -54,11 +55,12 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
      */
     @Override
     public boolean isSupported(Launcher launcher, final TaskListener listener) {
-        if (launcher == null || launcher.getChannel() == null) {
-            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
+        VirtualChannel channel = (launcher == null) ? null : launcher.getChannel(); 
+        if (channel == null) {
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher/channel. It should not happen");
         }
         try {
-            return launcher.getChannel().call(new TomcatNativeInstalled(listener));
+            return channel.call(new TomcatNativeInstalled(listener));
         } catch (Throwable throwable) {
             return false;
         }
@@ -70,15 +72,19 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
     @Override
     public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
         throws Throwable {
-
-        if (launcherProvider == null || launcherProvider.getLauncher() == null){
-            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher provider. It should not happen");
+        Launcher launcher = (launcherProvider == null) ? null : launcherProvider.getLauncher();
+        if (launcher == null){
+            throw new IllegalStateException("RemoteLauncher has been initialized with null launcher. It should not happen");
         }
 
-        RemoteHelper.registerBouncyCastle(launcherProvider.getLauncher().getChannel(), listener);
+        VirtualChannel channel = launcher.getChannel();
+        if (channel == null) {
+            throw new IllegalStateException("RemoteLauncher has been initialized with null channel. It should not happen");
+        }
+        RemoteHelper.registerBouncyCastle(channel, listener);
 
         // TODO temp directory currently ignored
-        return launcherProvider.getLauncher().getChannel().call(new MinaRemoteAgentStarter(listener));
+        return channel.call(new MinaRemoteAgentStarter(listener));
     }
 
     private static class TomcatNativeInstalled extends MasterToSlaveCallable<Boolean, Throwable> {
