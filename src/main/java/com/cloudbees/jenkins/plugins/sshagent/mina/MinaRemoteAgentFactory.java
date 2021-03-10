@@ -34,7 +34,7 @@ import hudson.Launcher;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.security.MasterToSlaveCallable;
-import org.apache.tomcat.jni.Library;
+import io.netty.internal.tcnative.Library;
 
 /**
  * A factory that uses the Apache Mina/SSH library support to (semi-)natively provide a ssh-agent implementation
@@ -103,7 +103,7 @@ public class MinaRemoteAgentFactory extends RemoteAgentFactory {
 
         public Boolean call() throws Throwable {
             try {
-                Library.initialize(null);
+                Library.initialize();
                 return true;
             } catch (Exception e) {
                 listener.getLogger().println("[ssh-agent] Could not find Tomcat Native library");

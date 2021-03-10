@@ -84,9 +84,9 @@
       <version>1.7.0</version>
     </dependency>
     <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>tomcat-apr</artifactId>
-      <version>5.5.23</version>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <version>2.0.0.Final</version>
     </dependency>
     <dependency>
       <groupId>com.cloudbees.util</groupId>
