@@ -147,6 +147,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(SSHAgentBuildWrapper.description(userPrivateKey)));
         }
 
+        // TODO UI could be streamlined now that there is only one impl
         listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
         Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
         for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
