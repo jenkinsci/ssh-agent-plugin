@@ -80,7 +80,7 @@ public class SSHAgentBase {
         sshd.setKeyPairProvider(hostKeyProvider);
         sshd.setShellFactory(new ShellFactory() {
             @Override
-            public Command  createShell(ChannelSession channel) throws IOException {
+            public Command createShell(ChannelSession channel) throws IOException {
                 Logger.getAnonymousLogger().info("Create shell");
                 return new Command() {
                     private InputStream inputStream;
