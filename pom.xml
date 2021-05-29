@@ -85,7 +85,7 @@
     <dependency>
       <groupId>org.jenkins-ci.modules</groupId>
       <artifactId>sshd</artifactId>
-      <version>3.0.4-rc197.87706f0ed69c</version>
+      <version>3.0.4-rc203.a16405ea4f48</version>
     </dependency>
     <!-- plugin dependencies -->
     <dependency>
