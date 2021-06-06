@@ -25,7 +25,6 @@ import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ShellFactory;
-import static org.apache.sshd.server.ServerAuthenticationManager.WELCOME_BANNER;
 
 public class SSHAgentBase {
 
