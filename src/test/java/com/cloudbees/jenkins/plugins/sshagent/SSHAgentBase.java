@@ -16,7 +16,6 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
-import org.apache.sshd.core.CoreModuleProperties;
 import org.apache.sshd.server.channel.ChannelSession;
 import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.Environment;
@@ -26,6 +25,7 @@ import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ShellFactory;
+import static org.apache.sshd.server.ServerAuthenticationManager.WELCOME_BANNER;
 
 public class SSHAgentBase {
 
@@ -74,7 +74,7 @@ public class SSHAgentBase {
         sshd = SshServer.setUpDefaultServer();
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
-        CoreModuleProperties.WELCOME_BANNER.set(sshd, "Welcome to the Mock SSH Server\n");
+        sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
         SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(Paths.get(hostKey.getPath()));
         hostKeyProvider.setAlgorithm(/* TODO when upgrading sshd: KeyUtils.RSA_ALGORITHM */"RSA"); // http://stackoverflow.com/a/33692432/12916
         sshd.setKeyPairProvider(hostKeyProvider);
