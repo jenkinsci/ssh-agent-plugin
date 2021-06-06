@@ -83,9 +83,10 @@
       <artifactId>workflow-step-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jenkins-ci.modules</groupId>
-      <artifactId>sshd</artifactId>
-      <version>3.0.4-rc203.a16405ea4f48</version>
+      <groupId>org.apache.sshd</groupId>
+      <artifactId>sshd-core</artifactId>
+      <version>2.5.1</version>
+      <scope>test</scope>
     </dependency>
     <!-- plugin dependencies -->
     <dependency>
