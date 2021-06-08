@@ -11,18 +11,20 @@ import java.io.StringReader;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Paths;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
-import org.apache.sshd.common.Factory;
-import org.apache.sshd.server.Command;
+import org.apache.sshd.server.channel.ChannelSession;
+import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.shell.ShellFactory;
 
 public class SSHAgentBase {
 
@@ -72,12 +74,12 @@ public class SSHAgentBase {
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
         sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
-        SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(new File(hostKey.getPath()));
+        SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(Paths.get(hostKey.getPath()));
         hostKeyProvider.setAlgorithm(/* TODO when upgrading sshd: KeyUtils.RSA_ALGORITHM */"RSA"); // http://stackoverflow.com/a/33692432/12916
         sshd.setKeyPairProvider(hostKeyProvider);
-        sshd.setShellFactory(new Factory<Command>() {
+        sshd.setShellFactory(new ShellFactory() {
             @Override
-            public Command create() {
+            public Command createShell(ChannelSession channel) throws IOException {
                 Logger.getAnonymousLogger().info("Create shell");
                 return new Command() {
                     private InputStream inputStream;
@@ -106,7 +108,7 @@ public class SSHAgentBase {
                     }
 
                     @Override
-                    public void start(Environment environment) throws IOException {
+                    public void start(ChannelSession channel, Environment env) throws IOException {
                         if (outputStream != null) {
                             try {
                                 outputStream.write("Connection established. Closing...\n".getBytes("UTF-8"));
@@ -121,7 +123,7 @@ public class SSHAgentBase {
                     }
 
                     @Override
-                    public void destroy() {
+                    public void destroy(ChannelSession channel) throws Exception {
 
                     }
                 };
