@@ -32,6 +32,18 @@ And then your build will have those credentials available, e.g.
 
 From a Pipeline job, use the `sshagent` step.
 
+# Jenkinsfile
+
+```
+      steps {
+          sshagent (credentials: ['ssh-credentials-id']) {
+            sh 'mkdir ~/.ssh && chmod 0700 ~/.ssh'
+            sh 'echo "$(ssh-keyscan -t rsa,dsa example.com)" >> ~/.ssh/known_hosts'
+            sh 'ssh user@example.com ...'
+          }
+      }
+```
+
 # Version History
 
 For new versions, see [GitHub releases](https://github.com/jenkinsci/ssh-agent-plugin/releases).
