@@ -63,7 +63,8 @@ public class ExecRemoteAgent implements RemoteAgent {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         if (launcherProvider.getLauncher().launch().cmds("ssh-agent").stdout(baos).start()
                 .joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
-            throw new AbortException("Failed to run ssh-agent");
+            String reason = new String(baos.toByteArray(), StandardCharsets.US_ASCII);
+            throw new AbortException("Failed to run ssh-agent: " + reason);
         }
         agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII), listener); // TODO could include local filenames, better to look up remote charset
         
