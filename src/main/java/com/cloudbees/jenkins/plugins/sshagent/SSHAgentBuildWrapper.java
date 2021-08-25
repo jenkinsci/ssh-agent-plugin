@@ -116,7 +116,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @param socketPath blank path will default to ssh-agent defaults.
-     * @since 1.23
+     * @since 1.24
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
@@ -131,7 +131,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      *                      of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @param socketPath blank path will default to ssh-agent defaults.
-     * @since 1.23
+     * @since 1.24
      */
     @SuppressWarnings("unused") // used via stapler
     public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, String socketPath) {
