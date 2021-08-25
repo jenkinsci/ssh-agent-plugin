@@ -56,9 +56,10 @@ public abstract class RemoteAgentFactory implements ExtensionPoint {
      * @param launcherProvider provides launchers on which to start a ssh-agent.
      * @param listener a listener for any diagnostics.
      * @param temp a temporary directory to use; null if unspecified
+     * @param socketPath the optional SSH_AUTH_SOCK socket path
      * @return the agent.
      * @throws Throwable if the agent cannot be started.
      */
     public abstract RemoteAgent start(LauncherProvider launcherProvider, TaskListener listener,
-                                      @CheckForNull FilePath temp) throws Throwable;
+                                      @CheckForNull FilePath temp, String socketPath) throws Throwable;
 }

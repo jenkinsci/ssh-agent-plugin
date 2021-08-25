@@ -224,6 +224,35 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
     @Test
     public void sshAgentWithTrickyPassphrase() throws Exception {
+      startMockSSHServer();
+
+      List<String> credentialIds = new ArrayList<String>();
+      credentialIds.add(CREDENTIAL_ID);
+
+      SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey2()), "*  .*", "test");
+      SystemCredentialsProvider.getInstance().getCredentials().add(key);
+      SystemCredentialsProvider.getInstance().save();
+
+      FreeStyleProject job = r.createFreeStyleProject();
+      job.setAssignedNode(r.createSlave());
+
+      SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
+      job.getBuildWrappersList().add(sshAgent);
+
+      Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
+        + "&& ssh-add -l "
+        + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p " + getAssignedPort()
+        + " -v -l cloudbees " + SSH_SERVER_HOST);
+      job.getBuildersList().add(shell);
+
+      r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+      stopMockSSHServer();
+    }
+    
+    @Test
+    public void sshAgentWithCustomSocketPath() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<String>();
@@ -237,10 +266,10 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
         FreeStyleProject job = r.createFreeStyleProject();
         job.setAssignedNode(r.createSlave());
 
-        SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false);
+        SSHAgentBuildWrapper sshAgent = new SSHAgentBuildWrapper(credentialIds, false, "/tmp/custom.sock");
         job.getBuildWrappersList().add(sshAgent);
 
-        Shell shell = new Shell("set | grep SSH_AUTH_SOCK "
+        Shell shell = new Shell("set | grep /tmp/custom.sock "
                 + "&& ssh-add -l "
                 + "&& ssh -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -p " + getAssignedPort()
                 + " -v -l cloudbees " + SSH_SERVER_HOST);

@@ -270,5 +270,34 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             r.assertLogNotContains("cloudbees", b);
         });
     }
+    
+    @Test
+    public void sshAgentAvailableWithCustomSockPath() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                startMockSSHServer();
 
+                List<String> credentialIds = new ArrayList<String>();
+                credentialIds.add(CREDENTIAL_ID);
+
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "  sshagent (credentials: ['" + CREDENTIAL_ID + "'], socketPath: '/tmp/custom.sock') {\n"
+                        + "    sh 'set | grep /tmp/custom.sock && ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+                stopMockSSHServer();
+            }
+        });
+    }
 }

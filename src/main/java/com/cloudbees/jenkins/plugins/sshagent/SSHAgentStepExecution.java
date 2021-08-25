@@ -154,7 +154,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
             if (factory.isSupported(launcher, listener)) {
                 try {
                     listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                    agent = factory.start(this, listener, tempDir(workspace));
+                    agent = factory.start(this, listener, tempDir(workspace), step.getSocketPath());
                     break;
                 } catch (Throwable t) {
                     faults.put(factory.getDisplayName(), t);
