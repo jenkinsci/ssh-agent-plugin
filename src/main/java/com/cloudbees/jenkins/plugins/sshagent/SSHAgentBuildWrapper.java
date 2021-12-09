@@ -44,6 +44,7 @@ import hudson.model.Item;
 import hudson.model.Queue;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
+import hudson.security.AccessControlled;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.IOException2;
@@ -63,8 +64,9 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * A build wrapper that provides an SSH agent using supplied credentials
@@ -496,8 +498,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
              * @return the list box model.
              */
             @SuppressWarnings("unused") // used by stapler
-            public ListBoxModel doFillIdItems() {
-                Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
+            public ListBoxModel doFillIdItems(@AncestorInPath Item item) {
+                AccessControlled contextToCheck = item == null ? Jenkins.get() : item;
+                if (!contextToCheck.hasPermission(CredentialsProvider.VIEW)) {
+                        return new StandardUsernameListBoxModel();
+                }
                 return new StandardUsernameListBoxModel()
                         .includeMatchingAs(
                                 item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) item) : ACL.SYSTEM,
@@ -507,7 +512,6 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                                 SSHAuthenticator.matcher()
                         );
             }
-
         }
     }
 
