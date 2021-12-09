@@ -10,12 +10,15 @@ import hudson.model.Item;
 import hudson.model.Queue;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
+import hudson.security.AccessControlled;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.QueryParameter;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -76,8 +79,11 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
          * @return the list box model.
          */
         @SuppressWarnings("unused") // used by stapler
-        public ListBoxModel doFillCredentialsItems() {
-            Item item = Stapler.getCurrentRequest().findAncestorObject(Item.class);
+        public ListBoxModel doFillCredentialsItems(@AncestorInPath Item item) {
+            AccessControlled contextToCheck = item == null ? Jenkins.get() : item;
+            if (!contextToCheck.hasPermission(CredentialsProvider.VIEW)) {
+                return new StandardUsernameListBoxModel();
+            }
             return new StandardUsernameListBoxModel()
                     .includeMatchingAs(
                             item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task)item) : ACL.SYSTEM,
