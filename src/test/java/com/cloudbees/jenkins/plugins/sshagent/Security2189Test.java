@@ -44,21 +44,6 @@ public class Security2189Test {
 
     @Issue("SECURITY-2189")
     @Test
-    public void doFillCredentialsItemsWhenAdminThenListPopulatedWithNameAndId() throws IOException {
-        setUpAuthorizationAndWorkflowJob();
-        initCredentials(SECURE_DATA, TEST_NAME);
-
-        try(ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(ADMINISTER_NAME))) {
-            SSHAgentStep.DescriptorImpl descriptor = (SSHAgentStep.DescriptorImpl) Jenkins.get().getDescriptorOrDie(SSHAgentStep.class);
-            ListBoxModel secureData = descriptor.doFillCredentialsItems(job);
-            ListBoxModel expected = new ListBoxModel(new ListBoxModel.Option(TEST_NAME, SECURE_DATA));
-
-            assertListBoxModel(secureData, expected);
-        }
-    }
-
-    @Issue("SECURITY-2189")
-    @Test
     public void doFillCredentialsItemsWhenUserWithoutAnyCredentialsThenListNotPopulated() throws Exception {
         setUpAuthorizationAndWorkflowJob();
         initCredentials(SECURE_DATA, TEST_NAME);
@@ -68,21 +53,6 @@ public class Security2189Test {
             ListBoxModel secureData = descriptor.doFillCredentialsItems(job);
 
             assertThat(secureData, is(empty()));
-        }
-    }
-
-    @Issue("SECURITY-2189")
-    @Test
-    public void doFillIdItemsWhenAdminThenListPopulated() throws IOException {
-        setUpAuthorizationAndFreestyleProject();
-        initCredentials(SECURE_DATA, TEST_NAME);
-
-        try(ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(ADMINISTER_NAME))) {
-            SSHAgentBuildWrapper.CredentialHolder.DescriptorImpl descriptor = (SSHAgentBuildWrapper.CredentialHolder.DescriptorImpl) Jenkins.get().getDescriptorOrDie(SSHAgentBuildWrapper.CredentialHolder.class);
-            ListBoxModel secureData = descriptor.doFillIdItems(project);
-            ListBoxModel expected = new ListBoxModel(new ListBoxModel.Option(TEST_NAME, SECURE_DATA));
-
-            assertListBoxModel(secureData, expected);
         }
     }
 
