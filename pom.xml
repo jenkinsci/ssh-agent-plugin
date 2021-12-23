@@ -34,7 +34,7 @@
   </parent>
 
   <artifactId>ssh-agent</artifactId>
-  <version>1.24.1</version>
+  <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
@@ -52,11 +52,11 @@
     <connection>scm:git:git://github.com/jenkinsci/ssh-agent-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/ssh-agent-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/ssh-agent-plugin</url>
-    <tag>ssh-agent-1.24.1</tag>
+    <tag>${scmTag}</tag>
   </scm>
 
   <properties>
-    <revision>1.25</revision>
+    <revision>1.24.2</revision>
     <changelist>-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/ssh-agent-plugin</gitHubRepo>
     <jenkins.version>2.289.1</jenkins.version>
