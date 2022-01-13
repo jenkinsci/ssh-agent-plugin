@@ -56,7 +56,7 @@
   </scm>
 
   <properties>
-    <revision>1.24</revision>
+    <revision>1.24.2</revision>
     <changelist>-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/ssh-agent-plugin</gitHubRepo>
     <jenkins.version>2.289.1</jenkins.version>
