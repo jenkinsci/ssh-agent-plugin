@@ -29,6 +29,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -60,13 +61,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
 
 /**
  * A build wrapper that provides an SSH agent using supplied credentials
@@ -267,8 +265,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param c the credentials.
      * @return the description.
      */
-    @Nonnull
-    public static String description(@Nonnull StandardUsernameCredentials c) {
+    @NonNull
+    public static String description(@NonNull StandardUsernameCredentials c) {
         String description = Util.fixEmptyAndTrim(c.getDescription());
         return c.getUsername() + (description != null ? " (" + description + ")" : "");
     }
