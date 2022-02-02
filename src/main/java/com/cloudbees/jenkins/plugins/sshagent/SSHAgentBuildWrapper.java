@@ -288,6 +288,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.SSHAgentBuildWrapper_DisplayName();
@@ -485,6 +486,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return Messages.SSHAgentBuildWrapper_CredentialHolder_DisplayName();

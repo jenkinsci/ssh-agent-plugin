@@ -4,6 +4,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.inject.Inject;
 import edu.umd.cs.findbugs.annotations.CheckReturnValue;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -68,7 +69,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
     }
 
     @Override
-    public void stop(Throwable cause) throws Exception {
+    public void stop(@NonNull Throwable cause) throws Exception {
         if (agent != null) {
             agent.stop(listener);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
