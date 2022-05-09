@@ -128,6 +128,12 @@
       <artifactId>docker-workflow</artifactId>
       <version>1.28</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.json</groupId>
+          <artifactId>json</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
   <dependencyManagement>
