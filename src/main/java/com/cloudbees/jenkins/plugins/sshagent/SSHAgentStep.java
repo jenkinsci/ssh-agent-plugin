@@ -5,6 +5,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.Queue;
@@ -63,6 +64,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
             return "sshagent";
         }
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.SSHAgentBuildWrapper_DisplayName();

@@ -3,6 +3,8 @@ package com.cloudbees.jenkins.plugins.sshagent;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.inject.Inject;
+import edu.umd.cs.findbugs.annotations.CheckReturnValue;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -14,7 +16,6 @@ import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.*;
 
-import javax.annotation.CheckReturnValue;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -68,7 +69,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
     }
 
     @Override
-    public void stop(Throwable cause) throws Exception {
+    public void stop(@NonNull Throwable cause) throws Exception {
         if (agent != null) {
             agent.stop(listener);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
@@ -226,7 +227,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
      *
      * @return The value that SSH_AUTH_SOCK should be set to.
      */
-    @CheckReturnValue private String getSocket() {
+    @CheckReturnValue
+    private String getSocket() {
         return socket;
     }
 

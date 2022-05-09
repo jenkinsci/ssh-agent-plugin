@@ -24,11 +24,11 @@
 
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-import javax.annotation.CheckForNull;
 
 /**
  * Extension point for ssh-agent providers.
