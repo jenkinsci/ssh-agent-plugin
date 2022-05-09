@@ -73,7 +73,6 @@ public class SSHAgentBase {
         sshd = SshServer.setUpDefaultServer();
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
-        sshd.getProperties().put(SshServer.WELCOME_BANNER, "Welcome to the Mock SSH Server\n");
         SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(Paths.get(hostKey.getPath()));
         hostKeyProvider.setAlgorithm(/* TODO when upgrading sshd: KeyUtils.RSA_ALGORITHM */"RSA"); // http://stackoverflow.com/a/33692432/12916
         sshd.setKeyPairProvider(hostKeyProvider);
