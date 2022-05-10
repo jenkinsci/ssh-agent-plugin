@@ -34,7 +34,7 @@
   </parent>
 
   <artifactId>ssh-agent</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>SSH Agent Plugin</name>
@@ -55,8 +55,7 @@
   </scm>
 
   <properties>
-    <revision>1.24.2</revision>
-    <changelist>-SNAPSHOT</changelist>
+    <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <jenkins.version>2.289.3</jenkins.version>
   </properties>
