@@ -1,6 +1,6 @@
 # SSH Agent Plugin
 
-This plugin allows you to provide SSH credentials to builds via a
+Thiss plugin allows you to provide SSH credentials to builds via a
 ssh-agent in Jenkins.
 
 This is convenient in some cases.
