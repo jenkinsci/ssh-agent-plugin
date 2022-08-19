@@ -48,7 +48,6 @@ import hudson.security.ACL;
 import hudson.security.AccessControlled;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
-import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import java.io.IOException;
@@ -249,13 +248,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             throws IOException, InterruptedException {
         try {
             return new SSHAgentEnvironment(launcher, listener, build.getWorkspace());
-        } catch (IOException e) {
-            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
         } catch (InterruptedException e) {
             e.printStackTrace(listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent()));
             throw e;
         } catch (Throwable e) {
-            throw new IOException2(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
+            throw new IOException(Messages.SSHAgentBuildWrapper_CouldNotStartAgent(), e);
         }
     }
 
@@ -363,7 +360,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
-            for (RemoteAgentFactory factory : Jenkins.getActiveInstance().getExtensionList(RemoteAgentFactory.class)) {
+            for (RemoteAgentFactory factory : Jenkins.get().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
