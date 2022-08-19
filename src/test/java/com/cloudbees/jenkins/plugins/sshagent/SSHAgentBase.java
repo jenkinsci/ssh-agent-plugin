@@ -16,6 +16,8 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+
+import org.apache.sshd.common.config.keys.KeyUtils;
 import org.apache.sshd.server.channel.ChannelSession;
 import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.Environment;
@@ -74,7 +76,7 @@ public class SSHAgentBase {
         sshd.setPort(getValidPort());
         sshd.setHost(SSH_SERVER_HOST);
         SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(Paths.get(hostKey.getPath()));
-        hostKeyProvider.setAlgorithm(/* TODO when upgrading sshd: KeyUtils.RSA_ALGORITHM */"RSA"); // http://stackoverflow.com/a/33692432/12916
+        hostKeyProvider.setAlgorithm(KeyUtils.RSA_ALGORITHM);
         sshd.setKeyPairProvider(hostKeyProvider);
         sshd.setShellFactory(new ShellFactory() {
             @Override
