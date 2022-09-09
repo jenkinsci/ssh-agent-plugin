@@ -24,7 +24,6 @@
 
 package com.cloudbees.jenkins.plugins.sshagent;
 
-import hudson.Launcher;
 import hudson.model.TaskListener;
 
 import java.io.IOException;
