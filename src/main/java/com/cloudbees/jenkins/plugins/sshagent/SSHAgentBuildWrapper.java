@@ -28,7 +28,6 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -125,7 +124,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     @SuppressWarnings("unused") // used via stapler
     public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
-        this.credentialIds = new ArrayList<String>(new LinkedHashSet<String>(credentialIds));
+        this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
     }
 
@@ -182,11 +181,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     @SuppressWarnings("unused") // used via stapler
     public CredentialHolder[] getCredentialHolders() {
-        List<CredentialHolder> result = new ArrayList<CredentialHolder>(credentialIds.size());
+        List<CredentialHolder> result = new ArrayList<>(credentialIds.size());
         for (String id : credentialIds) {
             result.add(new CredentialHolder(id));
         }
-        return result.toArray(new CredentialHolder[result.size()]);
+        return result.toArray(new CredentialHolder[0]);
     }
 
     /**
@@ -196,8 +195,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     public void preCheckout(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         // first collect all the keys (this is so we can bomb out before starting an agent
-        List<SSHUserPrivateKey> keys = new ArrayList<SSHUserPrivateKey>();
-        for (String id : new LinkedHashSet<String>(getCredentialIds())) {
+        List<SSHUserPrivateKey> keys = new ArrayList<>();
+        for (String id : new LinkedHashSet<>(getCredentialIds())) {
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(
                     id,
                     SSHUserPrivateKey.class,
@@ -244,7 +243,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         return new NoOpEnvironment();
     }
 
-    private SSHAgentEnvironment createSSHAgentEnvironment(AbstractBuild build, Launcher launcher, BuildListener listener)
+    private SSHAgentEnvironment createSSHAgentEnvironment(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         try {
             return new SSHAgentEnvironment(launcher, listener, build.getWorkspace());
@@ -359,7 +358,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             this.launcher = launcher;
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-            Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
+            Map<String, Throwable> faults = new LinkedHashMap<>();
             for (RemoteAgentFactory factory : Jenkins.get().getExtensionList(RemoteAgentFactory.class)) {
                 if (factory.isSupported(launcher, listener)) {
                     try {
@@ -465,7 +464,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         @NonNull
         public static List<String> toIdList(@Nullable CredentialHolder[] credentialHolders) {
-            List<String> result = new ArrayList<String>(credentialHolders == null ? 0 : credentialHolders.length);
+            List<String> result = new ArrayList<>(credentialHolders == null ? 0 : credentialHolders.length);
             if (credentialHolders != null) {
                 for (CredentialHolder h : credentialHolders) {
                     result.add(h.getId());
@@ -505,7 +504,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                                 item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) item) : ACL.SYSTEM,
                                 item,
                                 SSHUserPrivateKey.class,
-                                Collections.<DomainRequirement>emptyList(),
+                                Collections.emptyList(),
                                 SSHAuthenticator.matcher()
                         );
             }

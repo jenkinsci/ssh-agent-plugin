@@ -59,7 +59,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             public void evaluate() throws Throwable {
                 startMockSSHServer();
 
-                List<String> credentialIds = new ArrayList<String>();
+                List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
 
                 SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -100,7 +100,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             public void evaluate() throws Throwable {
                 startMockSSHServer();
 
-                List<String> credentialIds = new ArrayList<String>();
+                List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
 
                 SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -140,7 +140,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh-.+/agent.(\\d)+");
                 Scanner sc = new Scanner(b.getLogFile());
-                List<String> socketFile = new ArrayList<String>();
+                List<String> socketFile = new ArrayList<>();
                 while (sc.hasNextLine()) {
                     String match = sc.findInLine(pattern);
                     if (match != null) {
@@ -167,7 +167,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     @Test
     public void agentConnectionDropTest() throws Exception {
         story.then(r -> {
-            List<String> credentialIds = new ArrayList<String>();
+            List<String> credentialIds = new ArrayList<>();
             credentialIds.add(CREDENTIAL_ID);
             SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
                     new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
@@ -208,7 +208,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             public void evaluate() throws Throwable {
                 startMockSSHServer();
 
-                List<String> credentialIds = new ArrayList<String>();
+                List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
 
                 SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -252,7 +252,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 assumeNoException("have Docker installed", x);
             }
 
-            List<String> credentialIds = new ArrayList<String>();
+            List<String> credentialIds = new ArrayList<>();
             credentialIds.add(CREDENTIAL_ID);
 
             SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "x",
