@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -112,7 +113,7 @@ public class SSHAgentBase {
                     public void start(ChannelSession channel, Environment env) throws IOException {
                         if (outputStream != null) {
                             try {
-                                outputStream.write("Connection established. Closing...\n".getBytes("UTF-8"));
+                                outputStream.write("Connection established. Closing...\n".getBytes(StandardCharsets.UTF_8));
                                 outputStream.flush();
                             } catch (IOException e) {
                                 // squash

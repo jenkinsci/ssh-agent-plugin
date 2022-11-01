@@ -38,7 +38,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentAvailable() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -67,7 +67,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentDoesNotDieAfterFirstUse() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -108,7 +108,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentUnavailable() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -130,7 +130,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentWithInvalidCredentials() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -156,7 +156,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void testTrackingOfCredential() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -195,7 +195,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentWithSpacesInWorkspacePath() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
@@ -226,7 +226,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     public void sshAgentWithTrickyPassphrase() throws Exception {
         startMockSSHServer();
 
-        List<String> credentialIds = new ArrayList<String>();
+        List<String> credentialIds = new ArrayList<>();
         credentialIds.add(CREDENTIAL_ID);
 
         SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",

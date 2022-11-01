@@ -4,7 +4,6 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Item;
@@ -90,7 +89,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
                             item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task)item) : ACL.SYSTEM,
                             item,
                             SSHUserPrivateKey.class,
-                            Collections.<DomainRequirement>emptyList(),
+                            Collections.emptyList(),
                             SSHAuthenticator.matcher()
                     );
         }

@@ -60,7 +60,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
     @Override
     public boolean start() throws Exception {
         StepContext context = getContext();
-        sockets = new ArrayList<String>();
+        sockets = new ArrayList<>();
         initRemoteAgent();
         context.newBodyInvoker().
                 withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(this))).
@@ -133,8 +133,8 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
      */
     private void initRemoteAgent() throws IOException, InterruptedException {
 
-        List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<SSHUserPrivateKey>();
-        for (String id : new LinkedHashSet<String>(step.getCredentials())) {
+        List<SSHUserPrivateKey> userPrivateKeys = new ArrayList<>();
+        for (String id : new LinkedHashSet<>(step.getCredentials())) {
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(id, SSHUserPrivateKey.class, build);
             CredentialsProvider.track(build, c);
             if (c == null && !step.isIgnoreMissing()) {
@@ -150,7 +150,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
 
         // TODO UI could be streamlined now that there is only one impl
         listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-        Map<String, Throwable> faults = new LinkedHashMap<String, Throwable>();
+        Map<String, Throwable> faults = new LinkedHashMap<>();
         for (RemoteAgentFactory factory : Jenkins.get().getExtensionList(RemoteAgentFactory.class)) {
             if (factory.isSupported(launcher, listener)) {
                 try {
