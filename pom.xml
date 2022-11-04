@@ -93,7 +93,6 @@
     <dependency>
       <groupId>io.jenkins.plugins.mina-sshd-api</groupId>
       <artifactId>mina-sshd-api-core</artifactId>
-      <version>2.8.0-18.vd98674ecd652</version>
       <scope>test</scope>
     </dependency>
     <dependency>
