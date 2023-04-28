@@ -8,14 +8,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.net.BindException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import org.apache.sshd.common.config.keys.KeyUtils;
@@ -28,18 +24,19 @@ import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ShellFactory;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 public class SSHAgentBase {
 
-    public static AtomicInteger SSH_SERVER_INITIAL_PORT = new AtomicInteger(4380);
+    @Rule
+    public TemporaryFolder temp = new TemporaryFolder();
 
     public static String SSH_SERVER_HOST = "localhost";
 
     public static String CREDENTIAL_ID = "84822271-02d5-47b8-b8ff-c40fef175c29";
 
     private SshServer sshd = null;
-
-    private int assignedPort = SSH_SERVER_INITIAL_PORT.getAndIncrement();
 
     public String KEY_WITHOUT_PASSWORD_AND_NO_NEWLINE =
             "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
@@ -71,10 +68,9 @@ public class SSHAgentBase {
             "-----END OPENSSH PRIVATE KEY-----";
 
     protected void startMockSSHServer() throws Exception {
-        File hostKey = new File(System.getProperty("java.io.tmpdir") + "/key.ser");
-        hostKey.delete(); // do not carry from test to test
+        File hostKey = temp.newFile();
         sshd = SshServer.setUpDefaultServer();
-        sshd.setPort(getValidPort());
+        sshd.setPort(0);
         sshd.setHost(SSH_SERVER_HOST);
         SimpleGeneratorHostKeyProvider hostKeyProvider = new SimpleGeneratorHostKeyProvider(Paths.get(hostKey.getPath()));
         hostKeyProvider.setAlgorithm(KeyUtils.RSA_ALGORITHM);
@@ -314,35 +310,12 @@ public class SSHAgentBase {
     }
 
     /**
-     * Returns a valid port number to use in Mocked SSH Server. Verifies that the port is not being used.
-     *
-     * @return int with a valid port number
-     */
-    private int getValidPort() throws IOException {
-        boolean validPort = false;
-        while (!validPort) {
-            ServerSocket socket = null;
-            try {
-                socket = new ServerSocket(assignedPort, 0, InetAddress.getByName(SSH_SERVER_HOST));
-            } catch (BindException be) {
-                assignedPort = SSH_SERVER_INITIAL_PORT.getAndIncrement();
-            } finally {
-                if (socket != null) {
-                    socket.close();
-                    validPort = true;
-                }
-            }
-        }
-        return assignedPort;
-    }
-
-    /**
      * Returns the assigned port number to be used in Mock.
      *
      * @return int with an assigned port number
      */
     public int getAssignedPort() {
-        return assignedPort;
+        return sshd.getPort();
     }
 
 }
