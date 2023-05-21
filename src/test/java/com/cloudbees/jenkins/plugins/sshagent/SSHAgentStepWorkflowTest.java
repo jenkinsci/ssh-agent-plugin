@@ -5,6 +5,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.Fingerprint;
 import hudson.slaves.DumbSlave;
@@ -38,6 +39,7 @@ import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNoException;
 import static org.junit.Assume.assumeThat;
 
@@ -54,6 +56,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
     @Test
     public void sshAgentAvailable() throws Exception {
+        assumeFalse(Functions.isWindows());
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -95,6 +98,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
      */
     @Test
     public void sshAgentAvailableAfterRestart() throws Exception {
+        assumeFalse(Functions.isWindows());
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -201,6 +205,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     @Issue("JENKINS-38830")
     @Test
     public void testTrackingOfCredential() {
+        assumeFalse(Functions.isWindows());
 
 
         story.addStep(new Statement() {
@@ -243,6 +248,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     @Issue("SECURITY-704")
     @Test
     public void sshAgentDocker() throws Exception {
+        assumeFalse(Functions.isWindows());
         story.then(r -> {
             // From org.jenkinsci.plugins.docker.workflow.DockerTestUtil:
             Launcher.LocalLauncher localLauncher = new Launcher.LocalLauncher(StreamTaskListener.NULL);
