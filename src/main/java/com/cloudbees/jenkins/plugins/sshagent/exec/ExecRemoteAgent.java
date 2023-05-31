@@ -29,8 +29,11 @@ import com.cloudbees.jenkins.plugins.sshagent.RemoteAgent;
 import hudson.AbortException;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -125,6 +128,13 @@ public class ExecRemoteAgent implements RemoteAgent {
      */
     @Override
     public void stop(TaskListener listener) throws IOException, InterruptedException {
+        listener.getLogger().println("ssh agent debug: plugin vars");
+        listener.getLogger().println("ssh agent debug: " + AuthSocketVar + " = " + agentEnv.get(AuthSocketVar));
+        listener.getLogger().println("ssh agent debug: " + AgentPidVar + " = " + agentEnv.get(AgentPidVar));
+        listener.getLogger().println("ssh agent debug: system vars");
+        listener.getLogger().println("ssh agent debug: socket|pid - " + getSystemAgentEnvVars());
+
+
         if (launcherProvider.getLauncher().launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener)
                 .start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
             throw new AbortException("Failed to run ssh-agent -k");
@@ -171,5 +181,25 @@ public class ExecRemoteAgent implements RemoteAgent {
         // executable only for a current user
         askpass.chmod(0700);
         return askpass;
+    }
+
+    private String getSystemAgentEnvVars() {
+        String s;
+        StringBuilder f = new StringBuilder();
+        Process p;
+
+        try {
+            p = Runtime.getRuntime().exec("echo $" + AuthSocketVar + " $" + AgentPidVar);
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(p.getInputStream()));
+            while ((s = br.readLine()) != null)
+                f.append("; ").append(s);
+            p.waitFor();
+            p.destroy();
+        } catch (Exception e) {
+            return "getting system agent env vars failed: " + e.getMessage();
+        }
+
+        return f.toString();
     }
 }
