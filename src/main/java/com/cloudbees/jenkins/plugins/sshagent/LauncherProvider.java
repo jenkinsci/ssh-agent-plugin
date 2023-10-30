@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Launcher;
 
 import java.io.IOException;
@@ -14,5 +15,6 @@ public interface LauncherProvider {
     /**
      * Provides an up to date launcher
      */
+    @NonNull
     Launcher getLauncher() throws IOException, InterruptedException;
 }
