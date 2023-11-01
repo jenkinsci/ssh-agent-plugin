@@ -234,7 +234,11 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
 
     @Override
     public Launcher getLauncher() throws IOException, InterruptedException {
-        return getContext().get(Launcher.class);
+        Launcher launcher = getContext().get(Launcher.class);
+        if (launcher == null) {
+            throw new IOException("No launcher available");
+        }
+        return launcher;
     }
 
 }
