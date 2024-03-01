@@ -31,4 +31,7 @@
   <f:entry field="ignoreMissing">
     <f:checkbox title="${%Ignore missing credentials}" default="false"/>
   </f:entry>
+  <f:entry field="socketPath">
+    <f:textbox title="${%SSH_AUTH_SOCK path}" default="" />
+  </f:entry>
 </j:jelly>

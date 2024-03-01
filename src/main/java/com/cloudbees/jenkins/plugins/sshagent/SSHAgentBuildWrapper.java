@@ -88,6 +88,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @since 1.5
      */
     private final boolean ignoreMissing;
+    
+    /**
+     * When not blank, the specified path wil be used as SSH_AUTH_SOCK.
+     *
+     * @since 1.24
+     */
+    private final String socketPath;
 
     /**
      * Constructs a new instance.
@@ -106,14 +113,31 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      *
      * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
-     * @since 1.5
+     * @param socketPath blank path will default to ssh-agent defaults.
+     * @since 1.24
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing) {
-        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing);
+    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing, String socketPath) {
+      this(CredentialHolder.toIdList(credentialHolders), ignoreMissing, socketPath);
     }
-
+    
+    /**
+     * Constructs a new instance.
+     *
+     * @param credentialIds the {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s
+     *                      of the credentials to use.
+     * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
+     * @param socketPath blank path will default to ssh-agent defaults.
+     * @since 1.24
+     */
+    @SuppressWarnings("unused") // used via stapler
+    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, String socketPath) {
+      this.credentialIds = new ArrayList<String>(new LinkedHashSet<String>(credentialIds));
+      this.ignoreMissing = ignoreMissing;
+      this.socketPath = socketPath;
+    }
+    
     /**
      * Constructs a new instance.
      *
@@ -126,6 +150,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
         this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
+        this.socketPath = null;
     }
 
     /**
@@ -135,7 +160,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     private Object readResolve() throws ObjectStreamException {
         if (user != null) {
-            return new SSHAgentBuildWrapper(Collections.singletonList(user),false);
+            return new SSHAgentBuildWrapper(Collections.singletonList(user),false,null);
         }
         return this;
     }
@@ -170,7 +195,16 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      */
     @SuppressWarnings("unused") // used via stapler
     public boolean isIgnoreMissing() {
-        return ignoreMissing;
+      return ignoreMissing;
+    }
+  
+    /**
+     * When null or blank ssh-agent will use its defaults.
+     * @return SSH auth socket path. When null or blank ssh-agent will use its defaults
+     */
+    @SuppressWarnings("unused") // used via stapler
+    public String getSocketPath() {
+        return socketPath;
     }
 
     /**
@@ -364,7 +398,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                     try {
                         listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
                         agent = factory.start(new SingletonLauncherProvider(launcher), listener,
-                                workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null);
+                                workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null, socketPath);
                         break;
                     } catch (Throwable t) {
                         faults.put(factory.getDisplayName(), t);
@@ -402,7 +436,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                 agent.addIdentity(privateKey, effectivePassphrase, description(key), listener);
             }
         }
-
+        
         /**
          * {@inheritDoc}
          */

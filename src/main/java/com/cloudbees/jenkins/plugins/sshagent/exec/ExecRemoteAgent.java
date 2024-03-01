@@ -32,7 +32,9 @@ import hudson.model.TaskListener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -56,12 +58,18 @@ public class ExecRemoteAgent implements RemoteAgent {
 
     private final LauncherProvider launcherProvider;
 
-    ExecRemoteAgent(LauncherProvider launcherProvider, TaskListener listener, FilePath temp) throws Exception {
+    ExecRemoteAgent(LauncherProvider launcherProvider, TaskListener listener, FilePath temp, String socketPath) throws Exception {
         this.temp = temp;
         this.launcherProvider = launcherProvider;
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if (launcherProvider.getLauncher().launch().cmds("ssh-agent").stdout(baos).start()
+        List<String> sshAgentCmds = new ArrayList<String>();
+        sshAgentCmds.add("ssh-agent");
+        if ( socketPath != null && !socketPath.isEmpty()) {
+          sshAgentCmds.add("-a");
+          sshAgentCmds.add(socketPath);
+        }
+        if (launcherProvider.getLauncher().launch().cmds(sshAgentCmds).stdout(baos).start()
                 .joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
             String reason = new String(baos.toByteArray(), StandardCharsets.US_ASCII);
             throw new AbortException("Failed to run ssh-agent: " + reason);

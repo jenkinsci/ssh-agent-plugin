@@ -38,6 +38,11 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
      * By the fault is false. Initialized in the constructor.
      */
     private boolean ignoreMissing;
+    
+    /**
+     * Path to use for SSH_AUTH_SOCK. If null or blank, ssh-agent default will be used.
+     */
+    private String socketPath;
 
     /**
      * Default parameterized constructor.
@@ -48,6 +53,7 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
     public SSHAgentStep(final List<String> credentials) {
         this.credentials = credentials;
         this.ignoreMissing = false;
+        this.socketPath = null;
     }
 
     @Extension
@@ -102,7 +108,16 @@ public class SSHAgentStep extends AbstractStepImpl implements Serializable {
     }
 
     public boolean isIgnoreMissing() {
-        return ignoreMissing;
+      return ignoreMissing;
+    }
+
+    @DataBoundSetter
+    public void setSocketPath(final String socketPath) {
+        this.socketPath = socketPath;
+    }
+    
+    public String getSocketPath() {
+        return socketPath;
     }
 
     public List<String> getCredentials() {

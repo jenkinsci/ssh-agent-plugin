@@ -79,8 +79,8 @@ public class ExecRemoteAgentFactory extends RemoteAgentFactory {
      * {@inheritDoc}
      */
     @Override
-    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp)
+    public RemoteAgent start(LauncherProvider launcherProvider, final TaskListener listener, FilePath temp, String socketPath)
             throws Throwable {
-        return new ExecRemoteAgent(launcherProvider, listener, temp);
+        return new ExecRemoteAgent(launcherProvider, listener, temp, socketPath);
     }
 }
