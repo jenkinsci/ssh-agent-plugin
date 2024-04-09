@@ -8,6 +8,7 @@ import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.Fingerprint;
+import hudson.model.Result;
 import hudson.slaves.DumbSlave;
 import hudson.util.StreamTaskListener;
 import java.io.IOException;
@@ -279,6 +280,42 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             );
             WorkflowRun b = r.buildAndAssertSuccess(job);
             r.assertLogNotContains("cloudbees", b);
+        });
+    }
+
+    @Issue("JENKINS-32104")
+    @Test
+    public void testMissingCredential() {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition(""
+                  + "node {\n"
+                  + "  sshagent (credentials: ['nonexistent']) {\n"
+                  + "  }\n"
+                  + "}\n", true)
+                );
+                WorkflowRun b = story.j.buildAndAssertStatus(Result.FAILURE, job);
+                story.j.assertLogContains("Could not find specified credentials", b);
+            }
+        });
+    }
+
+    @Test
+    public void testIgnoreMissing() {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition(""
+                  + "node {\n"
+                  + "  sshagent (credentials: ['nonexistent'], ignoreMissing: true) {\n"
+                  + "  }\n"
+                  + "}\n", true)
+                );
+                story.j.buildAndAssertSuccess(job);
+            }
         });
     }
 

@@ -204,7 +204,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             );
             CredentialsProvider.track(build, c);
             if (c == null && !ignoreMissing) {
-                IOException ioe = new IOException(Messages.SSHAgentBuildWrapper_CredentialsNotFound());
+                IOException ioe = new IOException(Messages.SSHAgentBuildWrapper_CredentialsNotFound(id));
                 ioe.printStackTrace(listener.fatalError(""));
                 throw ioe;
             }
