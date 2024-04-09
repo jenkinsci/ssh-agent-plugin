@@ -296,7 +296,25 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                   + "  }\n"
                   + "}\n", true)
                 );
-                story.j.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+                WorkflowRun b = story.j.buildAndAssertStatus(Result.FAILURE, job);
+                story.j.assertLogContains("Could not find specified credentials", b);
+            }
+        });
+    }
+
+    @Test
+    public void testIgnoreMissing() {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition(""
+                  + "node {\n"
+                  + "  sshagent (credentials: ['nonexistent'], ignoreMissing: true) {\n"
+                  + "  }\n"
+                  + "}\n", true)
+                );
+                story.j.buildAndAssertSuccess(job);
             }
         });
     }
