@@ -5,6 +5,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.inject.Inject;
 import edu.umd.cs.findbugs.annotations.CheckReturnValue;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -138,7 +139,7 @@ public class SSHAgentStepExecution extends AbstractStepExecutionImpl implements 
             final SSHUserPrivateKey c = CredentialsProvider.findCredentialById(id, SSHUserPrivateKey.class, build);
             CredentialsProvider.track(build, c);
             if (c == null && !step.isIgnoreMissing()) {
-                throw new IOException(Messages.SSHAgentBuildWrapper_CredentialsNotFound(id));
+                throw new AbortException(Messages.SSHAgentBuildWrapper_CredentialsNotFound(id));
             }
             if (c != null && !userPrivateKeys.contains(c)) {
                 userPrivateKeys.add(c);
