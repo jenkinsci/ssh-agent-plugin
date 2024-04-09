@@ -286,8 +286,6 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     @Issue("JENKINS-32104")
     @Test
     public void testMissingCredential() {
-        assumeFalse(Functions.isWindows());
-
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
