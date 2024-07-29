@@ -41,7 +41,12 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     @Override
     public void stop(@NonNull Throwable cause) throws Exception {
-        stop();
+        try {
+            stop();
+        } catch (Exception x) {
+            cause.addSuppressed(x);
+        }
+        super.stop(cause);
     }
 
     private void stop() throws Exception {
