@@ -52,8 +52,11 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     private void stop() throws Exception {
         if (agent != null) {
             TaskListener listener = getContext().get(TaskListener.class);
-            agent.stop(getContext().get(Launcher.class), listener);
-            listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            Launcher launcher = getContext().get(Launcher.class);
+            if (listener != null && launcher != null) {
+                agent.stop(launcher, listener);
+                listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+            }
         }
     }
 
