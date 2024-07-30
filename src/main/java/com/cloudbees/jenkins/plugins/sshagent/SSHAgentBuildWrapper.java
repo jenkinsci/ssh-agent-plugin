@@ -23,12 +23,12 @@
  */
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import com.cloudbees.jenkins.plugins.sshagent.exec.ExecRemoteAgent;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -51,16 +51,13 @@ import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import java.io.IOException;
 import java.io.ObjectStreamException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -296,95 +293,20 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * The SSH Agent environment.
      */
     private class SSHAgentEnvironment extends Environment {
-        /**
-         * The proxy for the real remote agent that is on the other side of the channel (as the agent needs to
-         * run on a remote machine)
-         */
-        private final RemoteAgent agent;
+        private final ExecRemoteAgent agent;
 
         private final Launcher launcher;
 
+        private final FilePath workspace;
+
         private final BuildListener listener;
 
-        /**
-         * Construct the environment and initialize on the remote node.
-         *
-         * @param launcher          the launcher for the remote node.
-         * @param listener          the listener for reporting progress.
-         * @param sshUserPrivateKey the private key to add to the agent.
-         * @throws Throwable if things go wrong.
-         * @deprecated use {@link #SSHAgentEnvironment(hudson.Launcher, hudson.model.BuildListener, java.util.List)}
-         */
-        @Deprecated
-        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener,
-                                   final SSHUserPrivateKey sshUserPrivateKey) throws Throwable {
-            this(launcher, listener, Collections.singletonList(sshUserPrivateKey));
-        }
-
-        /**
-         * Construct the environment and initialize on the remote node.
-         *
-         * @param launcher           the launcher for the remote node.
-         * @param listener           the listener for reporting progress.
-         * @param sshUserPrivateKeys the private keys to add to the agent.
-         * @throws Throwable if things go wrong.
-         * @since 1.5
-         * @deprecated use {@link #SSHAgentEnvironment(Launcher, BuildListener)} and {@link #add(SSHUserPrivateKey)}.
-         */
-        @Deprecated
-        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener,
-                                   final List<SSHUserPrivateKey> sshUserPrivateKeys) throws Throwable {
-            this(launcher, listener);
-            for (SSHUserPrivateKey sshUserPrivateKey : sshUserPrivateKeys) {
-                add(sshUserPrivateKey);
-            }
-        }
-
-        @Deprecated
-        public SSHAgentEnvironment(Launcher launcher, final BuildListener listener) throws Throwable {
-            this(launcher, listener, (FilePath) null);
-        }
-
-        /**
-         * Construct the environment and initialize on the remote node.
-         *
-         * @param launcher           the launcher for the remote node.
-         * @param listener           the listener for reporting progress.
-         * @throws Throwable if things go wrong.
-         * @since 1.9
-         */
-        public SSHAgentEnvironment(Launcher launcher, BuildListener listener, @CheckForNull FilePath workspace) throws Throwable {
-            RemoteAgent agent = null;
+        SSHAgentEnvironment(Launcher launcher, BuildListener listener, FilePath workspace) throws Throwable {
             this.launcher = launcher;
+            this.workspace = Objects.requireNonNull(workspace);
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-            Map<String, Throwable> faults = new LinkedHashMap<>();
-            for (RemoteAgentFactory factory : Jenkins.get().getExtensionList(RemoteAgentFactory.class)) {
-                if (factory.isSupported(launcher, listener)) {
-                    try {
-                        listener.getLogger().println("[ssh-agent]   " + factory.getDisplayName());
-                        agent = factory.start(new SingletonLauncherProvider(launcher), listener,
-                                workspace != null ? SSHAgentStepExecution.tempDir(workspace) : null);
-                        break;
-                    } catch (Throwable t) {
-                        faults.put(factory.getDisplayName(), t);
-                    }
-                }
-            }
-            if (agent == null) {
-                listener.getLogger().println("[ssh-agent] FATAL: Could not find a suitable ssh-agent provider");
-                listener.getLogger().println("[ssh-agent] Diagnostic report");
-                for (Map.Entry<String, Throwable> fault : faults.entrySet()) {
-                    listener.getLogger().println("[ssh-agent] * " + fault.getKey());
-                    StringWriter sw = new StringWriter();
-                    fault.getValue().printStackTrace(new PrintWriter(sw));
-                    for (String line : StringUtils.split(sw.toString(), "\n")) {
-                        listener.getLogger().println("[ssh-agent]     " + line);
-                    }
-                }
-                throw new RuntimeException("[ssh-agent] Could not find a suitable ssh-agent provider.");
-            }
-            this.agent = agent;
+            agent = new ExecRemoteAgent(launcher, listener);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         }
 
@@ -399,7 +321,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             final Secret passphrase = key.getPassphrase();
             final String effectivePassphrase = passphrase == null ? null : passphrase.getPlainText();
             for (String privateKey : key.getPrivateKeys()) {
-                agent.addIdentity(privateKey, effectivePassphrase, description(key), listener);
+                agent.addIdentity(privateKey, effectivePassphrase, description(key), workspace, launcher, listener);
             }
         }
 
@@ -408,7 +330,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
          */
         @Override
         public void buildEnvVars(Map<String, String> env) {
-            env.put("SSH_AUTH_SOCK", agent.getSocket());
+            env.putAll(agent.getEnv());
         }
 
         /**
@@ -418,7 +340,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         public boolean tearDown(AbstractBuild build, BuildListener listener)
                 throws IOException, InterruptedException {
             if (agent != null) {
-                agent.stop(listener);
+                agent.stop(launcher, listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
             }
             return true;
@@ -514,25 +436,4 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private class NoOpEnvironment extends Environment {
     }
 
-    /**
-     * Singleton implementation of the launcher provider. This implementation
-     * is safe to use in situations where the launcher is persistent through
-     * out the entire lifetime of the ssh agent.
-     *
-     * This implementation is NOT safe to use together with pipelines and other
-     * types of durable builds.
-     */
-    private static class SingletonLauncherProvider implements LauncherProvider {
-
-        private final Launcher launcher;
-
-        private SingletonLauncherProvider(Launcher launcher) {
-            this.launcher = launcher;
-        }
-
-        @Override
-        public Launcher getLauncher() throws IOException, InterruptedException {
-            return launcher;
-        }
-    }
 }
