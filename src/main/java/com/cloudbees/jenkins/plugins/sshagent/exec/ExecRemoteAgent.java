@@ -143,6 +143,7 @@ public final class ExecRemoteAgent implements Serializable {
     private String getAgentValue(String agentOutput, String envVar) {
         int pos = agentOutput.indexOf(envVar) + envVar.length() + 1; // +1 for '='
         int end = agentOutput.indexOf(';', pos);
+        if(end < 0) end = agentOutput.length();
         return agentOutput.substring(pos, end);
     }
     
