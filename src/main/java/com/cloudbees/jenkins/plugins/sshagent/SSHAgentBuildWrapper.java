@@ -423,7 +423,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
                 }
                 return new StandardUsernameListBoxModel()
                         .includeMatchingAs(
-                                item instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) item) : ACL.SYSTEM,
+                                item instanceof Queue.Task ? Tasks.getAuthenticationOf2((Queue.Task) item) : ACL.SYSTEM2,
                                 item,
                                 SSHUserPrivateKey.class,
                                 Collections.emptyList(),
