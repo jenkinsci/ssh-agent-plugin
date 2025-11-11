@@ -17,14 +17,10 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,30 +33,30 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsIterableContaining.hasItem;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNoException;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.jenkinsci.plugins.docker.commons.tools.DockerTool;
 import org.jenkinsci.plugins.docker.workflow.client.DockerClient;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 
-public class SSHAgentStepWorkflowTest extends SSHAgentBase {
+class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
-    @Rule
-    public RestartableJenkinsRule story = new RestartableJenkinsRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension story = new JenkinsSessionExtension();
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
 
     @Test
-    public void sshAgentAvailable() throws Exception {
+    void sshAgentAvailable() throws Throwable {
         assumeFalse(Functions.isWindows());
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
+        story.then(j -> {
                 startMockSSHServer();
 
                 List<String> credentialIds = new ArrayList<>();
@@ -71,19 +67,19 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 SystemCredentialsProvider.getInstance().getCredentials().add(key);
                 SystemCredentialsProvider.getInstance().save();
 
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
                 job.setDefinition(new CpsFlowDefinition(""
-                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
                         + "    sh 'ls -l $SSH_AUTH_SOCK && ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST + "'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
-                story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                j.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
                 stopMockSSHServer();
             }
-        });
+        );
     }
 
     /**
@@ -164,11 +160,9 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
      * @throws Exception
      */
     @Test
-    public void sshAgentAvailableAfterRestart() throws Exception {
+    void sshAgentAvailableAfterRestart() throws Throwable {
         assumeFalse(Functions.isWindows());
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
+        story.then(j -> {
                 startMockSSHServer();
 
                 List<String> credentialIds = new ArrayList<>();
@@ -179,7 +173,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 SystemCredentialsProvider.getInstance().getCredentials().add(key);
                 SystemCredentialsProvider.getInstance().save();
 
-                WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailableAfterRestart");
+                WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailableAfterRestart");
                 p.setDefinition(new CpsFlowDefinition(""
                         + "node {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
@@ -196,18 +190,16 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 // wait until the executor gets assigned and the execution pauses
                 SemaphoreStep.waitForStart("sshAgentAvailableAfterRestart/1", b);
-                assertTrue(JenkinsRule.getLog(b), b.isBuilding());
+                assertTrue(b.isBuilding(), JenkinsRule.getLog(b));
             }
-        });
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                WorkflowJob p = story.j.jenkins.getItemByFullName("sshAgentAvailableAfterRestart", WorkflowJob.class);
+        );
+        story.then(j -> {
+                WorkflowJob p = j.jenkins.getItemByFullName("sshAgentAvailableAfterRestart", WorkflowJob.class);
                 WorkflowRun b = p.getBuildByNumber(1);
 
                 SemaphoreStep.success("sshAgentAvailableAfterRestart/1", null);
 
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
+                j.assertBuildStatusSuccess(j.waitForCompletion(b));
 
                 Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh-.+/agent.(\\d)+");
                 Scanner sc = new Scanner(b.getLogFile());
@@ -222,11 +214,11 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 }
                 sc.close();
 
-                assertEquals(socketFile.toString(), 2, socketFile.size());
+                assertEquals(2, socketFile.size(), socketFile.toString());
                 assertNotEquals(socketFile.get(0), socketFile.get(1));
                 stopMockSSHServer();
             }
-        });
+        );
 
     }
 
@@ -236,7 +228,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
      */
     @Issue("JENKINS-59259")
     @Test
-    public void agentConnectionDropTest() throws Exception {
+    void agentConnectionDropTest() throws Throwable {
         story.then(r -> {
             List<String> credentialIds = new ArrayList<>();
             credentialIds.add(CREDENTIAL_ID);
@@ -271,13 +263,9 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
     @Issue("JENKINS-38830")
     @Test
-    public void testTrackingOfCredential() {
+    void testTrackingOfCredential() throws Throwable {
         assumeFalse(Functions.isWindows());
-
-
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
+        story.then(j -> {
                 startMockSSHServer();
 
                 List<String> credentialIds = new ArrayList<>();
@@ -290,7 +278,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 Fingerprint fingerprint = CredentialsProvider.getFingerprintOf(key);
 
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
                 job.setDefinition(new CpsFlowDefinition(""
                   + "node {\n"
                   + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
@@ -301,7 +289,7 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 assertThat("No fingerprint created until first use", fingerprint, nullValue());
 
-                story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                j.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
                 fingerprint = CredentialsProvider.getFingerprintOf(key);
                 assertThat(fingerprint, notNullValue());
@@ -309,20 +297,21 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 stopMockSSHServer();
             }
-        });
+        );
     }
 
     @Issue("SECURITY-704")
     @Test
-    public void sshAgentDocker() throws Exception {
+    void sshAgentDocker() throws Throwable {
         assumeFalse(Functions.isWindows());
-        story.then(r -> {
+        story.then(j -> {
             // From org.jenkinsci.plugins.docker.workflow.DockerTestUtil:
             Launcher.LocalLauncher localLauncher = new Launcher.LocalLauncher(StreamTaskListener.NULL);
             try {
-                assumeThat("Docker working", localLauncher.launch().cmds(DockerTool.getExecutable(null, null, null, null), "ps").start().joinWithTimeout(DockerClient.CLIENT_TIMEOUT, TimeUnit.SECONDS, localLauncher.getListener()), is(0));
+                assumeTrue(localLauncher.launch().cmds(DockerTool.getExecutable(null, null, null, null), "ps").start().joinWithTimeout(DockerClient.CLIENT_TIMEOUT, TimeUnit.SECONDS, localLauncher.getListener()) == 0,
+                        "Docker working");
             } catch (IOException x) {
-                assumeNoException("have Docker installed", x);
+                assumeTrue(false, "have Docker installed:" + x);
             }
 
             List<String> credentialIds = new ArrayList<>();
@@ -333,9 +322,9 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
             SystemCredentialsProvider.getInstance().getCredentials().add(key);
             SystemCredentialsProvider.getInstance().save();
 
-            WorkflowJob job = r.createProject(WorkflowJob.class, "sshAgentDocker");
+            WorkflowJob job = j.createProject(WorkflowJob.class, "sshAgentDocker");
             job.setDefinition(new CpsFlowDefinition(""
-                + "node('" + r.createSlave().getNodeName() + "') {\n"
+                + "node('" + j.createSlave().getNodeName() + "') {\n"
                 + "  withDockerContainer('kroniak/ssh-client:3.22') {\n"
                 + "    sh 'ssh-agent -k || :'\n"
                 + "    sshagent(credentials: ['" + CREDENTIAL_ID + "']) {\n"
@@ -344,45 +333,45 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 + "  }\n"
                 + "}\n", true)
             );
-            WorkflowRun b = r.buildAndAssertSuccess(job);
-            r.assertLogNotContains("SSH_PASSPHRASE=cloudbees", b);
+            WorkflowRun b = j.buildAndAssertSuccess(job);
+            j.assertLogNotContains("SSH_PASSPHRASE=cloudbees", b);
         });
     }
 
     @Issue("JENKINS-32104")
     @Test
-    public void testMissingCredential() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
-                job.setDefinition(new CpsFlowDefinition(""
-                  + "node {\n"
-                  + "  sshagent (credentials: ['nonexistent']) {\n"
-                  + "  }\n"
-                  + "}\n", true)
+    void testMissingCredential() throws Throwable {
+        story.then(j -> {
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition("""
+                        \
+                        node {
+                          sshagent (credentials: ['nonexistent']) {
+                          }
+                        }
+                        """, true)
                 );
-                WorkflowRun b = story.j.buildAndAssertStatus(Result.FAILURE, job);
-                story.j.assertLogContains("Could not find specified credentials", b);
+                WorkflowRun b = j.buildAndAssertStatus(Result.FAILURE, job);
+                j.assertLogContains("Could not find specified credentials", b);
             }
-        });
+        );
     }
 
     @Test
-    public void testIgnoreMissing() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
-                job.setDefinition(new CpsFlowDefinition(""
-                  + "node {\n"
-                  + "  sshagent (credentials: ['nonexistent'], ignoreMissing: true) {\n"
-                  + "  }\n"
-                  + "}\n", true)
+    void testIgnoreMissing() throws Throwable {
+        story.then(j -> {
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "sshAgentAvailable");
+                job.setDefinition(new CpsFlowDefinition("""
+                        \
+                        node {
+                          sshagent (credentials: ['nonexistent'], ignoreMissing: true) {
+                          }
+                        }
+                        """, true)
                 );
-                story.j.buildAndAssertSuccess(job);
+                j.buildAndAssertSuccess(job);
             }
-        });
+        );
     }
 
 }
