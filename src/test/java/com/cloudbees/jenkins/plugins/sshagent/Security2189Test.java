@@ -12,11 +12,12 @@ import hudson.security.ACLContext;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.IOException;
 
@@ -29,26 +30,31 @@ import static org.hamcrest.Matchers.hasSize;
 /**
  * Test if there is any information disclosure
  */
-public class Security2189Test {
+@WithJenkins
+class Security2189Test {
 
     private static final String SECURE_DATA = "SecureData";
     private static final String TEST_NAME = "test";
     private static final String ADMINISTER_NAME = "administer";
     private static final String WITHOUT_ANY_PERMISSION_USER_NAME = "WithoutAnyPermissionUser";
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
     private WorkflowJob job;
     private FreeStyleProject project;
 
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+    }
+
     @Issue("SECURITY-2189")
     @Test
-    public void doFillCredentialsItemsWhenUserWithoutAnyCredentialsThenListNotPopulated() throws Exception {
+    void doFillCredentialsItemsWhenUserWithoutAnyCredentialsThenListNotPopulated() throws Exception {
         setUpAuthorizationAndWorkflowJob();
         initCredentials(SECURE_DATA, TEST_NAME);
 
-        try(ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(WITHOUT_ANY_PERMISSION_USER_NAME))) {
+        try (ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(WITHOUT_ANY_PERMISSION_USER_NAME))) {
             SSHAgentStep.DescriptorImpl descriptor = (SSHAgentStep.DescriptorImpl) Jenkins.get().getDescriptorOrDie(SSHAgentStep.class);
             ListBoxModel secureData = descriptor.doFillCredentialsItems(job);
 
@@ -58,11 +64,11 @@ public class Security2189Test {
 
     @Issue("SECURITY-2189")
     @Test
-    public void doFillIdItemsWhenUserWithoutAnyPermissionThenListNotPopulated() throws Exception {
+    void doFillIdItemsWhenUserWithoutAnyPermissionThenListNotPopulated() throws Exception {
         setUpAuthorizationAndWorkflowJob();
         initCredentials(SECURE_DATA, TEST_NAME);
 
-        try(ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(WITHOUT_ANY_PERMISSION_USER_NAME))) {
+        try (ACLContext aclContext = ACL.as(User.getOrCreateByIdOrFullName(WITHOUT_ANY_PERMISSION_USER_NAME))) {
             SSHAgentBuildWrapper.CredentialHolder.DescriptorImpl descriptor = (SSHAgentBuildWrapper.CredentialHolder.DescriptorImpl) Jenkins.get().getDescriptorOrDie(SSHAgentBuildWrapper.CredentialHolder.class);
             ListBoxModel secureData = descriptor.doFillIdItems(project);
 

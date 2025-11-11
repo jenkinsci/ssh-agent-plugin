@@ -13,12 +13,14 @@ import hudson.tasks.Shell;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,16 +28,22 @@ import static org.hamcrest.core.IsIterableContaining.hasItem;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 
-public class SSHAgentBuildWrapperTest extends SSHAgentBase {
+@WithJenkins
+class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void sshAgentAvailable() throws Exception {
+    void sshAgentAvailable() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -64,7 +72,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     }
 
     @Test
-    public void sshAgentDoesNotDieAfterFirstUse() throws Exception {
+    void sshAgentDoesNotDieAfterFirstUse() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -105,7 +113,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     }
 
     @Test
-    public void sshAgentUnavailable() throws Exception {
+    void sshAgentUnavailable() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -127,7 +135,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     }
 
     @Test
-    public void sshAgentWithInvalidCredentials() throws Exception {
+    void sshAgentWithInvalidCredentials() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -153,7 +161,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
     @Issue("JENKINS-38830")
     @Test
-    public void testTrackingOfCredential() throws Exception {
+    void testTrackingOfCredential() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -192,7 +200,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
 
     @Issue("JENKINS-42093")
     @Test
-    public void sshAgentWithSpacesInWorkspacePath() throws Exception {
+    void sshAgentWithSpacesInWorkspacePath() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
@@ -223,7 +231,7 @@ public class SSHAgentBuildWrapperTest extends SSHAgentBase {
     }
 
     @Test
-    public void sshAgentWithTrickyPassphrase() throws Exception {
+    void sshAgentWithTrickyPassphrase() throws Exception {
         startMockSSHServer();
 
         List<String> credentialIds = new ArrayList<>();
