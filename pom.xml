@@ -90,6 +90,11 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-credentials</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>git-client</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
     <dependency>

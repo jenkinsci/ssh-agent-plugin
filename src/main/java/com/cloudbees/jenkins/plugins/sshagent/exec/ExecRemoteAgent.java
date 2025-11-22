@@ -26,20 +26,26 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 
 import hudson.AbortException;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 import hudson.slaves.WorkspaceList;
+import jenkins.security.MasterToSlaveCallable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 /**
  * Runs a native SSH agent installed on a system.
@@ -60,6 +66,8 @@ public final class ExecRemoteAgent implements Serializable {
     /** The path of the ssh-agent executable. */
     private final String sshAgentBin;
 
+    private final boolean isWindowsAgent;
+
     /**
      * Launches a native {@code ssh-agent}.
      *
@@ -75,7 +83,10 @@ public final class ExecRemoteAgent implements Serializable {
         // A timeout of zero (or less) comes from job configurations persisted before the timeout
         // was configurable; treat it as the default rather than timing out immediately.
         this.timeoutMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
-        FilePath sshAgentPath = toSSHAgentPath(executablePath, launcher);
+        this.isWindowsAgent = isWindowsAgent(launcher, listener);
+        FilePath sshAgentPath = executablePath == null && isWindowsAgent
+                ? searchSSHAgentExeForWindows(launcher, listener)
+                : toSSHAgentPath(executablePath, launcher);
         this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(FilePath::getParent)
                 .map(p -> p.getRemote() + (launcher.isUnix() ? '/' : '\\')).orElse("");
 
@@ -93,6 +104,48 @@ public final class ExecRemoteAgent implements Serializable {
                     "Not an ssh-agent executable path (filename must be ssh-agent(.exe)): " + executable);
         }
         return path;
+    }
+
+    private FilePath searchSSHAgentExeForWindows(Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException {
+        try { // Git plugin is optional, handle a potential absence
+            // Search for the absolute path to the home directory of a git installation at
+            // the agent computer. Just git(.exe) is insufficient, as it only searches PATH.
+            Optional<String> defaultGitHome = Optional.ofNullable(hudson.plugins.git.GitTool.getDefaultInstallation())
+                    .map(hudson.plugins.git.GitTool::getHome)
+                    .filter(home -> !"git".equals(home) && !"git.exe".equals(home));
+            if (defaultGitHome.isPresent()) {
+                Optional<FilePath> sshAgentExe = extractGitSSHAgentExe(List.of(defaultGitHome.get()), launcher);
+                if (sshAgentExe.isPresent()) {
+                    return sshAgentExe.get();
+                }
+            }
+        } catch (NoClassDefFoundError e) { // git plugin is absent -> ignore
+        }
+        // Search a local git installation
+        String gitPaths = executeCommand(p -> p.cmds("where", "git").quiet(true), launcher, listener, true);
+        Optional<FilePath> sshAgentExe = extractGitSSHAgentExe(gitPaths.lines().filter(l -> !l.isEmpty())::iterator,
+                launcher);
+        return sshAgentExe.orElseThrow(() -> new IllegalStateException(
+                "Executing with default ssh-agent on Windows is not supported and an alternative implementation from a git installation is not available."));
+    }
+
+    private static final String GIT_EXE_PATH = "\\cmd\\git";
+    private static final String GIT_SSH_AGENT_PATH_WINDOWS = "usr\\bin\\ssh-agent.exe";
+
+    private static Optional<FilePath> extractGitSSHAgentExe(Iterable<String> gitHomeOrExePaths, Launcher launcher)
+            throws IOException, InterruptedException {
+        for (String path : gitHomeOrExePaths) {
+            Optional<FilePath> git = Optional.of(new FilePath(launcher.getChannel(), path));
+            if (path.endsWith(GIT_EXE_PATH + ".exe") || path.endsWith(GIT_EXE_PATH)) {
+                git = git.map(FilePath::getParent).map(FilePath::getParent);
+            }
+            Optional<FilePath> sshAgentExe = git.map(p -> p.child(GIT_SSH_AGENT_PATH_WINDOWS));
+            if (sshAgentExe.isPresent() && sshAgentExe.get().exists()) {
+                return sshAgentExe;
+            }
+        }
+        return Optional.empty();
     }
 
     private String executeCommand(Consumer<ProcStarter> processConfig, Launcher launcher, TaskListener listener,
@@ -209,7 +262,14 @@ public final class ExecRemoteAgent implements Serializable {
         // TODO better to just parse all env vars and keep them without picking out individual keys
 
         // get SSH_AUTH_SOCK
-        env.put(AuthSocketVar, getAgentValue(agentOutput, AuthSocketVar));
+        String socketPath = getAgentValue(agentOutput, AuthSocketVar);
+        if (isWindowsAgent) {
+            // Convert socket path (originally in linux-style) into Windows-style.
+            // The ssh-agent tools of a git installation can handle Windows (and Linux)
+            // style paths. But other Windows tools can only handle Windows-style.
+            socketPath = toWindowsPath(socketPath);
+        }
+        env.put(AuthSocketVar, socketPath);
         listener.getLogger().println(AuthSocketVar + "=" + env.get(AuthSocketVar));
 
         // get SSH_AGENT_PID
@@ -218,7 +278,17 @@ public final class ExecRemoteAgent implements Serializable {
         
         return env;
     }
-    
+
+    private static final Pattern WINDOWS_DRIVE_LETTER_IN_UNIX_PATH = Pattern.compile("^/[a-zA-Z]/");
+
+    private static String toWindowsPath(String socketPath) {
+        if (WINDOWS_DRIVE_LETTER_IN_UNIX_PATH.matcher(socketPath).find()) {
+            char driveLetter = Character.toUpperCase(socketPath.charAt(1));
+            socketPath = driveLetter + ":\\" + socketPath.substring(3);
+        }
+        return socketPath.replace('/', '\\');
+    }
+
     /**
      * Parses a value from ssh-agent output.
      *
@@ -244,18 +314,52 @@ public final class ExecRemoteAgent implements Serializable {
     }
     
     /**
-     * Creates a self-deleting script for SSH_ASKPASS. Self-deleting to be able to detect a wrong passphrase. 
+     * Creates a self-deleting script for SSH_ASKPASS. Self-deleting to be able to detect a wrong passphrase.
      */
     private FilePath createAskpassScript(FilePath temp) throws IOException, InterruptedException {
-        // TODO: assuming that ssh-add runs the script in shell even on Windows, not cmd
-        //       for cmd following could work
-        //       suffix = ".bat";
-        //       script = "@ECHO %SSH_PASSPHRASE%\nDEL \"" + askpass.getAbsolutePath() + "\"\n";
-        
-        FilePath askpass = temp.createTextTempFile("askpass_", ".sh", "#!/bin/sh\necho \"$SSH_PASSPHRASE\"\nrm \"$0\"\n");
-
-        // executable only for a current user
-        askpass.chmod(0700);
+        FilePath askpass;
+        if (isWindowsAgent) {
+            boolean pathContainsSpaces = temp.getRemote().contains(" ");
+            askpass = temp.createTextTempFile("askpass_", ".bat", """
+                    @ECHO %SSH_PASSPHRASE%
+                    start /b cmd /c del "%~f0" & exit /b
+                    """, !pathContainsSpaces);
+        } else {
+            askpass = temp.createTextTempFile("askpass_", ".sh", """
+                    #!/bin/sh
+                    echo "$SSH_PASSPHRASE"
+                    rm "$0"
+                    """);
+            // executable only for a current user
+            askpass.chmod(0700);
+        }
         return askpass;
+    }
+
+    // --- utility methods ---
+
+    /**
+     * Returns {@code true} if the executor is running on Windows (the controler's
+     * OS is ignored).
+     */
+    private boolean isWindowsAgent(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
+        if (launcher.isUnix()) {
+            return false;
+        }
+        VirtualChannel channel = launcher.getChannel();
+        if (channel == null) {
+            listener.getLogger().println("Failed to determine OS of non UNIX system: Channel is null");
+            return false;
+        }
+        return channel.call(new IsWindows());
+    }
+
+    private static final class IsWindows extends MasterToSlaveCallable<Boolean, RuntimeException> {
+        private static final long serialVersionUID = -2033363399440315941L;
+
+        @Override
+        public Boolean call() {
+            return Functions.isWindows();
+        }
     }
 }
