@@ -71,7 +71,7 @@ public final class ExecRemoteAgent implements Serializable {
         if (temp == null) {
             throw new IOException("No temp dir in " + ws);
         }
-        FilePath keyFile = temp.createTextTempFile("private_key_", ".key", privateKey);
+        FilePath keyFile = temp.createTextTempFile("private_key_", ".key", privateKey + "\n");
         try {
             keyFile.chmod(0600);
 
