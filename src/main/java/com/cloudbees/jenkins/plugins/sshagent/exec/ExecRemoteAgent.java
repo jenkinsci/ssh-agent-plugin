@@ -49,12 +49,35 @@ public final class ExecRemoteAgent implements Serializable {
 
     public ExecRemoteAgent(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if (launcher.launch().cmds("ssh-agent").stdout(baos).start()
-                .joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
-            String reason = new String(baos.toByteArray(), StandardCharsets.US_ASCII);
-            throw new AbortException("Failed to run ssh-agent: " + reason);
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        int status = launcher.launch().cmds("ssh-agent").stdout(baos).stderr(stderr).start()
+                .joinWithTimeout(1, TimeUnit.MINUTES, listener);
+        if (status != 0) {
+            throw new AbortException(describeFailure(
+                    status,
+                    new String(baos.toByteArray(), StandardCharsets.US_ASCII),
+                    new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
         }
         agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII), listener); // TODO could include local filenames, better to look up remote charset
+    }
+
+    /**
+     * Builds a diagnostic message for an {@code ssh-agent} launch that exited with a non-zero status.
+     * The exit code is always included so the failure is never reported with an empty reason.
+     *
+     * @param status the process exit code.
+     * @param stdout the captured standard output.
+     * @param stderr the captured standard error.
+     * @return a message including the exit code and whichever of standard error or standard output is available.
+     * @since FIXME
+     */
+    static String describeFailure(int status, String stdout, String stderr) {
+        String detail = stderr.strip();
+        if (detail.isEmpty()) {
+            detail = stdout.strip();
+        }
+        String message = "Failed to run ssh-agent (exit code " + status + ")";
+        return detail.isEmpty() ? message : message + ": " + detail;
     }
 
     /**
