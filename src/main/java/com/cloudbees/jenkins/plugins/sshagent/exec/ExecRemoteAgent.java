@@ -139,10 +139,25 @@ public final class ExecRemoteAgent implements Serializable {
     
     /**
      * Parses a value from ssh-agent output.
+     *
+     * @param agentOutput the raw output produced by {@code ssh-agent}.
+     * @param envVar      the environment variable to extract, e.g. {@code SSH_AUTH_SOCK}.
+     * @return the value assigned to {@code envVar}.
+     * @throws AbortException if {@code envVar} is absent or is not terminated by {@code ';'}, which
+     *                        happens when {@code ssh-agent} produced unexpected output.
+     * @since FIXME
      */
-    private String getAgentValue(String agentOutput, String envVar) {
-        int pos = agentOutput.indexOf(envVar) + envVar.length() + 1; // +1 for '='
+    static String getAgentValue(String agentOutput, String envVar) throws AbortException {
+        int keyIndex = agentOutput.indexOf(envVar);
+        if (keyIndex == -1) {
+            throw new AbortException("Unexpected ssh-agent output, missing " + envVar + ": " + agentOutput);
+        }
+        int pos = keyIndex + envVar.length() + 1; // +1 for '='
         int end = agentOutput.indexOf(';', pos);
+        if (end == -1) {
+            throw new AbortException(
+                    "Unexpected ssh-agent output, " + envVar + " was not terminated by ';': " + agentOutput);
+        }
         return agentOutput.substring(pos, end);
     }
     
