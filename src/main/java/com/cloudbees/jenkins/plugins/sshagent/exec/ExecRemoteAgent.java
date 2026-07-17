@@ -54,6 +54,7 @@ public final class ExecRemoteAgent implements Serializable {
                 .joinWithTimeout(1, TimeUnit.MINUTES, listener);
         if (status != 0) {
             throw new AbortException(describeFailure(
+                    "ssh-agent",
                     status,
                     new String(baos.toByteArray(), StandardCharsets.US_ASCII),
                     new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
@@ -62,21 +63,23 @@ public final class ExecRemoteAgent implements Serializable {
     }
 
     /**
-     * Builds a diagnostic message for an {@code ssh-agent} launch that exited with a non-zero status.
+     * Builds a diagnostic message for a command that exited with a non-zero status.
      * The exit code is always included so the failure is never reported with an empty reason.
      *
-     * @param status the process exit code.
-     * @param stdout the captured standard output.
-     * @param stderr the captured standard error.
-     * @return a message including the exit code and whichever of standard error or standard output is available.
+     * @param command the command that failed, e.g. {@code ssh-add}.
+     * @param status  the process exit code.
+     * @param stdout  the captured standard output.
+     * @param stderr  the captured standard error.
+     * @return a message including the command, the exit code and whichever of standard error or
+     *         standard output is available.
      * @since FIXME
      */
-    static String describeFailure(int status, String stdout, String stderr) {
+    static String describeFailure(String command, int status, String stdout, String stderr) {
         String detail = stderr.strip();
         if (detail.isEmpty()) {
             detail = stdout.strip();
         }
-        String message = "Failed to run ssh-agent (exit code " + status + ")";
+        String message = "Failed to run " + command + " (exit code " + status + ")";
         return detail.isEmpty() ? message : message + ": " + detail;
     }
 
@@ -111,9 +114,12 @@ public final class ExecRemoteAgent implements Serializable {
                 // as the next command is in quiet mode, we just add a message to the log
                 listener.getLogger().println("Running ssh-add (command line suppressed)");
                 
-                if (launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env)
-                        .stdout(listener).start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
-                    throw new AbortException("Failed to run ssh-add");
+                ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+                int status = launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env)
+                        .stdout(listener).stderr(stderr).start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
+                if (status != 0) {
+                    throw new AbortException(describeFailure(
+                            "ssh-add", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
                 }
             } finally {
                 if (askpass != null && askpass.exists()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
@@ -135,9 +141,12 @@ public final class ExecRemoteAgent implements Serializable {
      * @param listener for logging.
      */
     public void stop(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
-        if (launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener)
-                .start().joinWithTimeout(1, TimeUnit.MINUTES, listener) != 0) {
-            throw new AbortException("Failed to run ssh-agent -k");
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        int status = launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener).stderr(stderr)
+                .start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
+        if (status != 0) {
+            throw new AbortException(describeFailure(
+                    "ssh-agent -k", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
         }
     }
     
