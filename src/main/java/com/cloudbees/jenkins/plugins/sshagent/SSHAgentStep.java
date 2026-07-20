@@ -7,6 +7,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.Launcher;
 import hudson.model.Item;
 import hudson.model.Queue;
@@ -42,6 +43,12 @@ public class SSHAgentStep extends Step {
      * By the fault is false. Initialized in the constructor.
      */
     private boolean ignoreMissing;
+
+    /**
+     * If set, the username of the first resolved credential is exposed under this environment
+     * variable inside the block, so it can be passed to {@code ssh -l}. Optional; unset by default.
+     */
+    private String usernameVariable;
 
     /**
      * Default parameterized constructor.
@@ -112,6 +119,15 @@ public class SSHAgentStep extends Step {
 
     public boolean isIgnoreMissing() {
         return ignoreMissing;
+    }
+
+    @DataBoundSetter
+    public void setUsernameVariable(final String usernameVariable) {
+        this.usernameVariable = Util.fixEmptyAndTrim(usernameVariable);
+    }
+
+    public String getUsernameVariable() {
+        return usernameVariable;
     }
 
     public List<String> getCredentials() {
