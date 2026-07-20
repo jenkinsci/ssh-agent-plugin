@@ -24,9 +24,16 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
 
     private ExecRemoteAgent agent;
 
+    /** Optional environment variable to expose the credential username under. Survives resume. */
+    private final String usernameVariable;
+
+    /** Username of the first resolved credential, captured when {@link #usernameVariable} is set. */
+    private String username;
+
     SSHAgentStepExecution(SSHAgentStep step, StepContext context) {
         super(context);
         this.step = step;
+        this.usernameVariable = step.getUsernameVariable();
     }
 
     @Override
@@ -90,6 +97,9 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         @Override
         public void expand(EnvVars env) throws IOException, InterruptedException {
             env.overrideAll(execution.agent.getEnv());
+            if (execution.usernameVariable != null && execution.username != null) {
+                env.override(execution.usernameVariable, execution.username);
+            }
         }
     }
 
@@ -116,6 +126,10 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_UsingCredentials(SSHAgentBuildWrapper.description(userPrivateKey)));
+        }
+
+        if (usernameVariable != null && !userPrivateKeys.isEmpty()) {
+            username = userPrivateKeys.get(0).getUsername();
         }
 
         agent = new ExecRemoteAgent(launcher, listener);

@@ -121,6 +121,38 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     }
 
     /**
+     * Verifies that the optional usernameVariable exposes the credential's SSH username inside the
+     * block, so it can be passed to {@code ssh -l} (JENKINS-45312).
+     */
+    @Test
+    public void exposesCredentialUsernameViaUsernameVariable() throws Exception {
+        assumeFalse(Functions.isWindows());
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                List<String> credentialIds = new ArrayList<>();
+                credentialIds.add(CREDENTIAL_ID);
+
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "usernameVariable");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "  sshagent (credentials: ['" + CREDENTIAL_ID + "'], usernameVariable: 'SSH_USER') {\n"
+                        + "    sh 'echo user=$SSH_USER'\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                WorkflowRun run = story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                story.j.assertLogContains("user=cloudbees", run);
+            }
+        });
+    }
+
+    /**
      * This test verifies:
      *
      * 1. The Job is executed successfully
