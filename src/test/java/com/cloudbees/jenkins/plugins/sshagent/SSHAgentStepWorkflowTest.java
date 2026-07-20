@@ -87,6 +87,40 @@ public class SSHAgentStepWorkflowTest extends SSHAgentBase {
     }
 
     /**
+     * Verifies that a failed {@code ssh-agent -k} during teardown does not fail an otherwise
+     * successful build. The build stops the agent from inside the block, so the automatic teardown
+     * finds it already gone; with best-effort teardown the build still succeeds and the failure is
+     * only logged (JENKINS-43716).
+     */
+    @Test
+    public void teardownDoesNotFailBuildWhenAgentAlreadyStopped() throws Exception {
+        assumeFalse(Functions.isWindows());
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                List<String> credentialIds = new ArrayList<>();
+                credentialIds.add(CREDENTIAL_ID);
+
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "teardownBestEffort");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
+                        + "    sh 'ssh-agent -k'\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                WorkflowRun run = story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                story.j.assertLogContains("Failed to run ssh-agent -k", run);
+            }
+        });
+    }
+
+    /**
      * This test verifies:
      *
      * 1. The Job is executed successfully

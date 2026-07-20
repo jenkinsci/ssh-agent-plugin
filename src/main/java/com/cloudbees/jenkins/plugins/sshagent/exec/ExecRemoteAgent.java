@@ -138,6 +138,10 @@ public final class ExecRemoteAgent implements Serializable {
     /**
      * Stops the agent.
      *
+     * <p>Stopping is best-effort cleanup: if the {@code ssh-agent} process is already gone (for example
+     * killed during a long build), a failed {@code ssh-agent -k} is logged rather than thrown, so that
+     * it does not fail an otherwise successful build.
+     *
      * @param listener for logging.
      */
     public void stop(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
@@ -145,7 +149,7 @@ public final class ExecRemoteAgent implements Serializable {
         int status = launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener).stderr(stderr)
                 .start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
         if (status != 0) {
-            throw new AbortException(describeFailure(
+            listener.getLogger().println(describeFailure(
                     "ssh-agent -k", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
         }
     }
