@@ -44,14 +44,35 @@ public final class ExecRemoteAgent implements Serializable {
     private static final String AuthSocketVar = "SSH_AUTH_SOCK";
     private static final String AgentPidVar = "SSH_AGENT_PID";
 
+    /** Default timeout, in minutes, applied to the agent commands when none is configured. */
+    public static final int DEFAULT_TIMEOUT_MINUTES = 1;
+
     /** Agent environment used for {@code ssh-add} and {@code ssh-agent -k}. */
     private final Map<String, String> agentEnv;
 
+    /** Timeout, in minutes, for the {@code ssh-agent}, {@code ssh-add} and {@code ssh-agent -k} commands. */
+    private final int timeoutMinutes;
+
     public ExecRemoteAgent(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
+        this(launcher, listener, DEFAULT_TIMEOUT_MINUTES);
+    }
+
+    /**
+     * Launches a native {@code ssh-agent}.
+     *
+     * @param launcher       launches the agent process.
+     * @param listener       for logging.
+     * @param timeoutMinutes how long, in minutes, to wait for each of the {@code ssh-agent},
+     *                       {@code ssh-add} and {@code ssh-agent -k} commands before giving up.
+     * @since FIXME
+     */
+    public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes)
+            throws IOException, InterruptedException {
+        this.timeoutMinutes = timeoutMinutes;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         int status = launcher.launch().cmds("ssh-agent").stdout(baos).stderr(stderr).start()
-                .joinWithTimeout(1, TimeUnit.MINUTES, listener);
+                .joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
         if (status != 0) {
             throw new AbortException(describeFailure(
                     "ssh-agent",
@@ -116,7 +137,8 @@ public final class ExecRemoteAgent implements Serializable {
                 
                 ByteArrayOutputStream stderr = new ByteArrayOutputStream();
                 int status = launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env)
-                        .stdout(listener).stderr(stderr).start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
+                        .stdout(listener).stderr(stderr).start()
+                        .joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
                 if (status != 0) {
                     throw new AbortException(describeFailure(
                             "ssh-add", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
@@ -147,7 +169,7 @@ public final class ExecRemoteAgent implements Serializable {
     public void stop(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         int status = launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener).stderr(stderr)
-                .start().joinWithTimeout(1, TimeUnit.MINUTES, listener);
+                .start().joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
         if (status != 0) {
             listener.getLogger().println(describeFailure(
                     "ssh-agent -k", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));

@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import com.cloudbees.jenkins.plugins.sshagent.exec.ExecRemoteAgent;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -49,6 +50,13 @@ public class SSHAgentStep extends Step {
      * variable inside the block, so it can be passed to {@code ssh -l}. Optional; unset by default.
      */
     private String usernameVariable;
+
+    /**
+     * Timeout, in minutes, applied to the underlying {@code ssh-agent}, {@code ssh-add} and
+     * {@code ssh-agent -k} commands. Defaults to {@link ExecRemoteAgent#DEFAULT_TIMEOUT_MINUTES}.
+     * Values below one are treated as one.
+     */
+    private int timeoutMinutes = ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES;
 
     /**
      * Default parameterized constructor.
@@ -128,6 +136,15 @@ public class SSHAgentStep extends Step {
 
     public String getUsernameVariable() {
         return usernameVariable;
+    }
+
+    @DataBoundSetter
+    public void setTimeoutMinutes(final int timeoutMinutes) {
+        this.timeoutMinutes = Math.max(1, timeoutMinutes);
+    }
+
+    public int getTimeoutMinutes() {
+        return timeoutMinutes;
     }
 
     public List<String> getCredentials() {
