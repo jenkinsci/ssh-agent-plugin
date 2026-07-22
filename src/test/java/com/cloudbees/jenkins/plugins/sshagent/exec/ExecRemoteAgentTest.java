@@ -26,33 +26,33 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import hudson.AbortException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ExecRemoteAgentTest {
+class ExecRemoteAgentTest {
 
     private static final String VALID_OUTPUT = "SSH_AUTH_SOCK=/tmp/ssh-abcdef/agent.123; export SSH_AUTH_SOCK;\n"
             + "SSH_AGENT_PID=456; export SSH_AGENT_PID;\n"
             + "echo Agent pid 456;\n";
 
     @Test
-    public void parsesValuesFromWellFormedOutput() throws Exception {
+    void parsesValuesFromWellFormedOutput() throws Exception {
         assertEquals("/tmp/ssh-abcdef/agent.123", ExecRemoteAgent.getAgentValue(VALID_OUTPUT, "SSH_AUTH_SOCK"));
         assertEquals("456", ExecRemoteAgent.getAgentValue(VALID_OUTPUT, "SSH_AGENT_PID"));
     }
 
     @Test
-    public void reportsMissingVariableInsteadOfIndexOutOfBounds() {
+    void reportsMissingVariableInsteadOfIndexOutOfBounds() {
         AbortException e = assertThrows(
                 AbortException.class, () -> ExecRemoteAgent.getAgentValue("no environment here", "SSH_AUTH_SOCK"));
         assertThat(e.getMessage(), containsString("SSH_AUTH_SOCK"));
     }
 
     @Test
-    public void reportsUnterminatedValueInsteadOfIndexOutOfBounds() {
+    void reportsUnterminatedValueInsteadOfIndexOutOfBounds() {
         // Variable is present but is not terminated by ';', which previously threw
         // StringIndexOutOfBoundsException from substring(pos, -1). See issue #280.
         AbortException e = assertThrows(

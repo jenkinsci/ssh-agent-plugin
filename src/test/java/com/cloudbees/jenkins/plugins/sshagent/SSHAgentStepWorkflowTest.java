@@ -89,11 +89,9 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
      * only logged (JENKINS-43716).
      */
     @Test
-    public void teardownDoesNotFailBuildWhenAgentAlreadyStopped() throws Exception {
+    void teardownDoesNotFailBuildWhenAgentAlreadyStopped() throws Throwable {
         assumeFalse(Functions.isWindows());
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
+        story.then(j -> {
                 List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
 
@@ -102,18 +100,18 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 SystemCredentialsProvider.getInstance().getCredentials().add(key);
                 SystemCredentialsProvider.getInstance().save();
 
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "teardownBestEffort");
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "teardownBestEffort");
                 job.setDefinition(new CpsFlowDefinition(""
-                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "']) {\n"
                         + "    sh 'ssh-agent -k'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
-                WorkflowRun run = story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
-                story.j.assertLogContains("Failed to run ssh-agent -k", run);
+                WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                j.assertLogContains("Failed to run ssh-agent -k", run);
             }
-        });
+        );
     }
 
     /**
@@ -121,11 +119,9 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
      * block, so it can be passed to {@code ssh -l} (JENKINS-45312).
      */
     @Test
-    public void exposesCredentialUsernameViaUsernameVariable() throws Exception {
+    void exposesCredentialUsernameViaUsernameVariable() throws Throwable {
         assumeFalse(Functions.isWindows());
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
+        story.then(j -> {
                 List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
 
@@ -134,18 +130,18 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 SystemCredentialsProvider.getInstance().getCredentials().add(key);
                 SystemCredentialsProvider.getInstance().save();
 
-                WorkflowJob job = story.j.jenkins.createProject(WorkflowJob.class, "usernameVariable");
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "usernameVariable");
                 job.setDefinition(new CpsFlowDefinition(""
-                        + "node('" + story.j.createSlave().getNodeName() + "') {\n"
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
                         + "  sshagent (credentials: ['" + CREDENTIAL_ID + "'], usernameVariable: 'SSH_USER') {\n"
                         + "    sh 'echo user=$SSH_USER'\n"
                         + "  }\n"
                         + "}\n", true)
                 );
-                WorkflowRun run = story.j.assertBuildStatusSuccess(job.scheduleBuild2(0));
-                story.j.assertLogContains("user=cloudbees", run);
+                WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                j.assertLogContains("user=cloudbees", run);
             }
-        });
+        );
     }
 
     /**
