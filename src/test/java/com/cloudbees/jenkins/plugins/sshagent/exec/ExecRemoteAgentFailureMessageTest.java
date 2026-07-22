@@ -27,26 +27,26 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ExecRemoteAgentFailureMessageTest {
+class ExecRemoteAgentFailureMessageTest {
 
     @Test
-    public void includesStderrWhenAvailable() {
+    void includesStderrWhenAvailable() {
         String message = ExecRemoteAgent.describeFailure("ssh-agent", 1, "", "ssh-agent: command not found\n");
         assertThat(message, containsString("exit code 1"));
         assertThat(message, containsString("ssh-agent: command not found"));
     }
 
     @Test
-    public void fallsBackToStdoutWhenStderrEmpty() {
+    void fallsBackToStdoutWhenStderrEmpty() {
         String message = ExecRemoteAgent.describeFailure("ssh-agent", 2, "diagnostic on stdout\n", "");
         assertThat(message, containsString("exit code 2"));
         assertThat(message, containsString("diagnostic on stdout"));
     }
 
     @Test
-    public void stillReportsExitCodeWhenNoOutput() {
+    void stillReportsExitCodeWhenNoOutput() {
         // Previously an empty reason produced "Failed to run ssh-agent: " with nothing useful
         // after the colon (issue #278). The exit code must always be reported.
         String message = ExecRemoteAgent.describeFailure("ssh-agent", 127, "", "");
@@ -54,7 +54,7 @@ public class ExecRemoteAgentFailureMessageTest {
     }
 
     @Test
-    public void namesTheFailingCommand() {
+    void namesTheFailingCommand() {
         // ssh-add and ssh-agent -k share the same diagnostics, so the message must identify
         // which command failed rather than always saying ssh-agent.
         String message = ExecRemoteAgent.describeFailure("ssh-add", 1, "", "Bad passphrase, try again\n");
