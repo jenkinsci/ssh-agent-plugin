@@ -132,7 +132,7 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             username = userPrivateKeys.get(0).getUsername();
         }
 
-        agent = new ExecRemoteAgent(launcher, listener);
+        agent = new ExecRemoteAgent(launcher, listener, step.getTimeoutMinutes());
 
         for (SSHUserPrivateKey userPrivateKey : userPrivateKeys) {
             final Secret passphrase = userPrivateKey.getPassphrase();
