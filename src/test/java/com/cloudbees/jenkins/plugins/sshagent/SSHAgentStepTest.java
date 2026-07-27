@@ -65,6 +65,14 @@ class SSHAgentStepTest {
         assertTrue(step.isIgnoreMissing());
     }
 
+    @Test
+    void hostKeyVerificationDefaultsToFalseAndToggles() {
+        SSHAgentStep step = newStep();
+        assertFalse(step.isHostKeyVerification());
+        step.setHostKeyVerification(true);
+        assertTrue(step.isHostKeyVerification());
+    }
+
     private static SSHAgentStep newStep() {
         return new SSHAgentStep(List.of("dummy-credential-id"));
     }

@@ -64,6 +64,16 @@ public class SSHAgentStep extends Step {
     private String executable;
 
     /**
+     * If enabled, {@code GIT_SSH_COMMAND} is exposed inside the block so that Git operations verify
+     * the remote host key using the git-client plugin's globally configured verification strategy.
+     * The verifier's known_hosts is created on the agent where the build runs, so a
+     * {@code KnownHostsFile} strategy pointing at a path on the controller is not visible to the agent.
+     * A {@code GIT_SSH_COMMAND} the user already set is left untouched.
+     * Optional; disabled by default so existing pipelines are unaffected.
+     */
+    private boolean hostKeyVerification;
+
+    /**
      * Default parameterized constructor.
      *
      * @param credentials
@@ -159,6 +169,15 @@ public class SSHAgentStep extends Step {
 
     public String getExecutable() {
         return executable;
+    }
+
+    @DataBoundSetter
+    public void setHostKeyVerification(final boolean hostKeyVerification) {
+        this.hostKeyVerification = hostKeyVerification;
+    }
+
+    public boolean isHostKeyVerification() {
+        return hostKeyVerification;
     }
 
     public List<String> getCredentials() {

@@ -372,4 +372,61 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
         );
     }
 
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/292")
+    @Test
+    void hostKeyVerificationDoesNotOverridePreSetGitSshCommand() throws Throwable {
+        assumeFalse(Functions.isWindows());
+        story.then(j -> {
+                List<String> credentialIds = new ArrayList<>();
+                credentialIds.add(CREDENTIAL_ID);
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "hostKeyPreSet");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
+                        + "  withEnv(['GIT_SSH_COMMAND=ssh -o Custom=1']) {\n"
+                        + "    sshagent (credentials: ['" + CREDENTIAL_ID + "'], hostKeyVerification: true) {\n"
+                        + "      sh 'echo GSC=$GIT_SSH_COMMAND'\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                j.assertLogContains("GIT_SSH_COMMAND is already set", run);
+                j.assertLogContains("GSC=ssh -o Custom=1", run);
+            }
+        );
+    }
+
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/292")
+    @Test
+    void hostKeyVerificationExposesGitSshCommand() throws Throwable {
+        assumeFalse(Functions.isWindows());
+        story.then(j -> {
+                List<String> credentialIds = new ArrayList<>();
+                credentialIds.add(CREDENTIAL_ID);
+                SSHUserPrivateKey key = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, credentialIds.get(0), "cloudbees",
+                        new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(getPrivateKey()), "cloudbees", "test");
+                SystemCredentialsProvider.getInstance().getCredentials().add(key);
+                SystemCredentialsProvider.getInstance().save();
+
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "hostKeyEnabled");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
+                        + "  sshagent (credentials: ['" + CREDENTIAL_ID + "'], hostKeyVerification: true) {\n"
+                        + "    sh 'echo GSC=$GIT_SSH_COMMAND'\n"
+                        + "  }\n"
+                        + "}\n", true)
+                );
+                WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
+                // The command is always prefixed with "ssh " by the plugin; the exact verify options
+                // come from git-client and are not asserted here to keep this independent of its version.
+                j.assertLogContains("GSC=ssh ", run);
+            }
+        );
+    }
+
 }
