@@ -32,5 +32,13 @@
   <f:entry field="ignoreMissing">
     <f:checkbox title="${%Ignore missing credentials}" default="false" />
   </f:entry>
+  <f:advanced>
+    <f:entry title="${%Username variable}" field="usernameVariable">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="${%Timeout (minutes)}" field="timeoutMinutes">
+      <f:number clazz="positive-number" default="1" min="1" />
+    </f:entry>
+  </f:advanced>
 
 </j:jelly>
