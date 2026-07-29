@@ -87,6 +87,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private final boolean ignoreMissing;
 
     /**
+     * The timeout (in minutes) for ssh agent commands.
+     *
+     * @since FIXME
+     */
+    private final int timeout;
+
+    /**
      * Constructs a new instance.
      *
      * @param user the {@link SSHUserPrivateKey#getId()} of the credentials to use.
@@ -98,17 +105,29 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         this(Collections.singletonList(user), false);
     }
 
+    @SuppressWarnings("unused") // used via stapler
+    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing) {
+        this(credentialHolders, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES);
+    }
+
+    @Deprecated
+    @SuppressWarnings("unused") // used via stapler
+    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
+        this(credentialIds, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES);
+    }
+
     /**
      * Constructs a new instance.
      *
      * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
-     * @since 1.5
+     * @param timeout The timeout (in minutes) for ssh agent commands.
+     * @since FIXME
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing) {
-        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing);
+    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing, int timeout) {
+        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing, timeout);
     }
 
     /**
@@ -117,12 +136,14 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param credentialIds the {@link com.cloudbees.plugins.credentials.common.StandardUsernameCredentials#getId()}s
      *                      of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
-     * @since 1.5
+     * @param timeout       The timeout (in minutes) for ssh agent commands.
+     * @since FIXME
      */
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
+    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, int timeout) {
         this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
+        this.timeout = timeout;
     }
 
     /**
@@ -168,6 +189,17 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     @SuppressWarnings("unused") // used via stapler
     public boolean isIgnoreMissing() {
         return ignoreMissing;
+    }
+
+    /**
+     * The timeout (in minutes) for ssh agent commands.
+     *
+     * @return the startup timeout in minutes.
+     * @since FIXME
+     */
+    @SuppressWarnings("unused") // used via stapler
+    public int getTimeout() {
+        return timeout;
     }
 
     /**
@@ -306,7 +338,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             this.workspace = Objects.requireNonNull(workspace);
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-            agent = new ExecRemoteAgent(launcher, listener);
+            agent = new ExecRemoteAgent(launcher, listener, SSHAgentBuildWrapper.this.timeout);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         }
 
