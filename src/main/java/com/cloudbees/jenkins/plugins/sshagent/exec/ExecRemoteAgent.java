@@ -31,11 +31,14 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.TaskListener;
 import hudson.slaves.WorkspaceList;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -55,6 +58,9 @@ public final class ExecRemoteAgent implements Serializable {
     /** Timeout, in minutes, for the {@code ssh-agent}, {@code ssh-add} and {@code ssh-agent -k} commands. */
     private final int timeoutMinutes;
 
+    /** The path of the ssh-agent executable. */
+    private final String sshAgentBin;
+
     /**
      * Launches a native {@code ssh-agent}.
      *
@@ -62,14 +68,30 @@ public final class ExecRemoteAgent implements Serializable {
      * @param listener       for logging.
      * @param timeoutMinutes how long, in minutes, to wait for each of the {@code ssh-agent},
      *                       {@code ssh-add} and {@code ssh-agent -k} commands before giving up.
+     * @param executablePath the path to the ssh-agent executable (may be relative) or null to use the default.
      * @since 405
      */
-    public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes)
+    public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes, String executablePath)
             throws IOException, InterruptedException {
         this.timeoutMinutes = timeoutMinutes;
+        Path sshAgentPath = toSSHAgentPath(executablePath);
+        this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(Path::getParent).map(p -> p + File.separator)
+                .orElse("");
 
         String agentOut = executeCommand(p -> p.cmds("ssh-agent"), launcher, listener, true);
         agentEnv = parseAgentEnv(agentOut, listener); // TODO could include local filenames, better to look up remote charset
+    }
+
+    private static Path toSSHAgentPath(String executable) {
+        if (executable == null) {
+            return null;
+        }
+        Path path = Path.of(executable);
+        if (!path.endsWith("ssh-agent") && !path.endsWith("ssh-agent.exe")) {
+            throw new IllegalArgumentException(
+                    "Not an ssh-agent executable path (filename must be ssh-agent(.exe)): " + executable);
+        }
+        return path;
     }
 
     private String executeCommand(Consumer<ProcStarter> processConfig, Launcher launcher, TaskListener listener,
@@ -78,6 +100,10 @@ public final class ExecRemoteAgent implements Serializable {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         ProcStarter starter = launcher.launch().stdout(stdOut).stderr(stderr);
         processConfig.accept(starter);
+        String cmd = starter.cmds().get(0); // assume first argument is program name
+        if (cmd.startsWith("ssh-")) {
+            starter.cmds().set(0, sshAgentBin + cmd); // Prefix ssh agent commands with user-specified prefix
+        }
         int status = starter.start().joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
         if (status != 0) {
             String failure = (describeFailure(String.join(" ", starter.cmds()), status,

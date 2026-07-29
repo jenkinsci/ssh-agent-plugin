@@ -35,5 +35,8 @@
     <f:entry field="timeout" title="${%Timeout}">
       <f:number default="1" min="1" step="1" clazz="positive-number" />
     </f:entry>
+    <f:entry field="executable" title="${%Executable}">
+      <f:textbox/>
+    </f:entry>
   </f:advanced>
 </j:jelly>

@@ -59,6 +59,11 @@ public class SSHAgentStep extends Step {
     private int timeoutMinutes = ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES;
 
     /**
+     * The SSH agent executable. Defaults to ssh-agent on the system's {@code PATH}
+     */
+    private String executable;
+
+    /**
      * Default parameterized constructor.
      *
      * @param credentials
@@ -145,6 +150,15 @@ public class SSHAgentStep extends Step {
 
     public int getTimeoutMinutes() {
         return timeoutMinutes;
+    }
+
+    @DataBoundSetter
+    public void setExecutable(String executable) {
+        this.executable = executable;
+    }
+
+    public String getExecutable() {
+        return executable;
     }
 
     public List<String> getCredentials() {
