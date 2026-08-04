@@ -197,7 +197,10 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
                 j.assertBuildStatusSuccess(j.waitForCompletion(b));
 
-                Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )/.+/ssh-.+/agent.(\\d)+");
+                // The socket path layout is an ssh-agent implementation detail and varies by platform
+                // (for example macOS uses ~/.ssh/agent/s.<id>.agent.<id> rather than /tmp/ssh-XXXX/agent.<pid>),
+                // so match on the log label and capture whatever socket path follows.
+                Pattern pattern = Pattern.compile("(?:SSH Agent (?:before|after) restart )\\S+");
                 Scanner sc = new Scanner(b.getLogFile());
                 List<String> socketFile = new ArrayList<>();
                 while (sc.hasNextLine()) {
