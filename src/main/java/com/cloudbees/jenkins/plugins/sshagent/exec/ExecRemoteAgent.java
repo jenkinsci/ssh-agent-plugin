@@ -55,10 +55,6 @@ public final class ExecRemoteAgent implements Serializable {
     /** Timeout, in minutes, for the {@code ssh-agent}, {@code ssh-add} and {@code ssh-agent -k} commands. */
     private final int timeoutMinutes;
 
-    public ExecRemoteAgent(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
-        this(launcher, listener, DEFAULT_TIMEOUT_MINUTES);
-    }
-
     /**
      * Launches a native {@code ssh-agent}.
      *
@@ -66,7 +62,7 @@ public final class ExecRemoteAgent implements Serializable {
      * @param listener       for logging.
      * @param timeoutMinutes how long, in minutes, to wait for each of the {@code ssh-agent},
      *                       {@code ssh-add} and {@code ssh-agent -k} commands before giving up.
-     * @since FIXME
+     * @since 405
      */
     public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes)
             throws IOException, InterruptedException {
@@ -105,7 +101,7 @@ public final class ExecRemoteAgent implements Serializable {
      * @param stderr  the captured standard error.
      * @return a message including the command, the exit code and whichever of standard error or
      *         standard output is available.
-     * @since FIXME
+     * @since 405
      */
     static String describeFailure(String command, int status, String stdout, String stderr) {
         String detail = stderr.strip();
@@ -203,7 +199,7 @@ public final class ExecRemoteAgent implements Serializable {
      * @return the value assigned to {@code envVar}.
      * @throws AbortException if {@code envVar} is absent or is not terminated by {@code ';'}, which
      *                        happens when {@code ssh-agent} produced unexpected output.
-     * @since FIXME
+     * @since 405
      */
     static String getAgentValue(String agentOutput, String envVar) throws AbortException {
         int keyIndex = agentOutput.indexOf(envVar);
