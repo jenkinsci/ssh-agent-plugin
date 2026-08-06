@@ -27,6 +27,7 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 import hudson.AbortException;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Launcher.ProcStarter;
 import hudson.model.TaskListener;
 import hudson.slaves.WorkspaceList;
 import java.io.ByteArrayOutputStream;
@@ -36,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Runs a native SSH agent installed on a system.
@@ -69,18 +71,28 @@ public final class ExecRemoteAgent implements Serializable {
     public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes)
             throws IOException, InterruptedException {
         this.timeoutMinutes = timeoutMinutes;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        String agentOut = executeCommand(p -> p.cmds("ssh-agent"), launcher, listener, true);
+        agentEnv = parseAgentEnv(agentOut, listener); // TODO could include local filenames, better to look up remote charset
+    }
+
+    private String executeCommand(Consumer<ProcStarter> processConfig, Launcher launcher, TaskListener listener,
+            boolean failOnError) throws IOException, InterruptedException {
+        ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-        int status = launcher.launch().cmds("ssh-agent").stdout(baos).stderr(stderr).start()
-                .joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
+        ProcStarter starter = launcher.launch().stdout(stdOut).stderr(stderr);
+        processConfig.accept(starter);
+        int status = starter.start().joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
         if (status != 0) {
-            throw new AbortException(describeFailure(
-                    "ssh-agent",
-                    status,
-                    new String(baos.toByteArray(), StandardCharsets.US_ASCII),
-                    new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
+            String failure = (describeFailure(String.join(" ", starter.cmds()), status,
+                    stdOut.toString(StandardCharsets.US_ASCII), stderr.toString(StandardCharsets.US_ASCII)));
+            if (failOnError) {
+                throw new AbortException(failure);
+            } else {
+                listener.getLogger().println(failure);
+            }
         }
-        agentEnv = parseAgentEnv(new String(baos.toByteArray(), StandardCharsets.US_ASCII), listener); // TODO could include local filenames, better to look up remote charset
+        return stdOut.toString(StandardCharsets.US_ASCII);
     }
 
     /**
@@ -135,14 +147,8 @@ public final class ExecRemoteAgent implements Serializable {
                 // as the next command is in quiet mode, we just add a message to the log
                 listener.getLogger().println("Running ssh-add (command line suppressed)");
                 
-                ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-                int status = launcher.launch().quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env)
-                        .stdout(listener).stderr(stderr).start()
-                        .joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
-                if (status != 0) {
-                    throw new AbortException(describeFailure(
-                            "ssh-add", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
-                }
+                executeCommand(p -> p.quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener),
+                        launcher, listener, true);
             } finally {
                 if (askpass != null && askpass.exists()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
                     askpass.delete();
@@ -167,13 +173,7 @@ public final class ExecRemoteAgent implements Serializable {
      * @param listener for logging.
      */
     public void stop(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
-        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-        int status = launcher.launch().cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener).stderr(stderr)
-                .start().joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
-        if (status != 0) {
-            listener.getLogger().println(describeFailure(
-                    "ssh-agent -k", status, "", new String(stderr.toByteArray(), StandardCharsets.US_ASCII)));
-        }
+        executeCommand(p -> p.cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener), launcher, listener, false);
     }
     
     /**
