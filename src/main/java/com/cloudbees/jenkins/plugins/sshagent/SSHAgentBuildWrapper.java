@@ -94,6 +94,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private final int timeout;
 
     /**
+     * The path to the {@code ssh-agent} executable.
+     *
+     * @since FIXME
+     */
+    private final String executable;
+
+    /**
      * Constructs a new instance.
      *
      * @param user the {@link SSHUserPrivateKey#getId()} of the credentials to use.
@@ -107,13 +114,13 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
 
     @SuppressWarnings("unused") // used via stapler
     public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing) {
-        this(credentialHolders, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES);
+        this(credentialHolders, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES, null);
     }
 
     @Deprecated
     @SuppressWarnings("unused") // used via stapler
     public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing) {
-        this(credentialIds, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES);
+        this(credentialIds, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES, null);
     }
 
     /**
@@ -122,12 +129,14 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      * @param credentialHolders the {@link com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper.CredentialHolder}s of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @param timeout The timeout (in minutes) for ssh agent commands.
+     * @param executable The path to the {@code ssh-agent} executable.
      * @since FIXME
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing, int timeout) {
-        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing, timeout);
+    public SSHAgentBuildWrapper(CredentialHolder[] credentialHolders, boolean ignoreMissing, int timeout,
+            String executable) {
+        this(CredentialHolder.toIdList(credentialHolders), ignoreMissing, timeout, executable);
     }
 
     /**
@@ -137,13 +146,15 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
      *                      of the credentials to use.
      * @param ignoreMissing {@code true} missing credentials will not cause a build failure.
      * @param timeout       The timeout (in minutes) for ssh agent commands.
+     * @param executable    The path to the {@code ssh-agent} executable.
      * @since FIXME
      */
     @SuppressWarnings("unused") // used via stapler
-    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, int timeout) {
+    public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, int timeout, String executable) {
         this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
         this.timeout = timeout;
+        this.executable = executable;
     }
 
     /**
@@ -200,6 +211,17 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     @SuppressWarnings("unused") // used via stapler
     public int getTimeout() {
         return timeout;
+    }
+
+    /**
+     * The path to the {@code ssh-agent} executable.
+     *
+     * @return the {@code ssh-agent} executable path.
+     * @since FIXME
+     */
+    @SuppressWarnings("unused") // used via stapler
+    public String getExecutable() {
+        return executable;
     }
 
     /**
@@ -338,7 +360,8 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             this.workspace = Objects.requireNonNull(workspace);
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
-            agent = new ExecRemoteAgent(launcher, listener, SSHAgentBuildWrapper.this.timeout);
+            agent = new ExecRemoteAgent(launcher, listener, SSHAgentBuildWrapper.this.timeout,
+                    SSHAgentBuildWrapper.this.executable);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         }
 
