@@ -153,7 +153,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     public SSHAgentBuildWrapper(List<String> credentialIds, boolean ignoreMissing, int timeout, String executable) {
         this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
-        this.timeout = timeout;
+        this.timeout = timeout > 0 ? timeout : ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES;
         this.executable = executable;
     }
 
@@ -165,6 +165,11 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private Object readResolve() throws ObjectStreamException {
         if (user != null) {
             return new SSHAgentBuildWrapper(Collections.singletonList(user),false);
+        }
+        if (timeout <= 0) {
+            // Configurations persisted before the timeout was configurable have no timeout value,
+            // which deserializes to zero and would otherwise time out immediately. Restore the default.
+            return new SSHAgentBuildWrapper(credentialIds, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES, executable);
         }
         return this;
     }

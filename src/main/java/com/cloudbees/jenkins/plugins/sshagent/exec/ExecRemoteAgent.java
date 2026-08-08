@@ -73,7 +73,9 @@ public final class ExecRemoteAgent implements Serializable {
      */
     public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes, String executablePath)
             throws IOException, InterruptedException {
-        this.timeoutMinutes = timeoutMinutes;
+        // A timeout of zero (or less) comes from job configurations persisted before the timeout
+        // was configurable; treat it as the default rather than timing out immediately.
+        this.timeoutMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
         Path sshAgentPath = toSSHAgentPath(executablePath);
         this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(Path::getParent).map(p -> p + File.separator)
                 .orElse("");
