@@ -108,8 +108,12 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
                         + "  }\n"
                         + "}\n", true)
                 );
-                WorkflowRun run = j.assertBuildStatusSuccess(job.scheduleBuild2(0));
-                j.assertLogContains("Failed to run ssh-agent -k", run);
+                // The build must still succeed even though the agent was already killed inside the
+                // block. Whether teardown's own ssh-agent -k reports a failure depends on whether the
+                // environment reaps the orphaned agent process (an init running as PID 1); with no
+                // reaper the stale PID lingers and the kill reports success instead. So we only assert
+                // that the build is not failed, not on the teardown message.
+                j.assertBuildStatusSuccess(job.scheduleBuild2(0));
             }
         );
     }
