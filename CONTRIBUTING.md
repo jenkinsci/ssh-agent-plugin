@@ -151,3 +151,8 @@ To the greatest extent possible, please wrap lines to ensure that they do not ex
             * import all other imports
             * blank line
             * import static all other imports
+
+# Testing conventions
+
+* Assert the observable contract of a build (its result, stable output) rather than incidental log lines. Messages whose presence depends on the OS or the test environment (orphan reaping by an init, timing, exact syscall error text) pass locally but fail in other environments such as the PCT weekly and 2.541.x lines.
+* When adding a persisted field to a `@DataBoundConstructor`/`@DataBoundSetter` type, add a test that loads a legacy configuration without the field and check it deserializes to a safe default. Default absent or out-of-range values at the point of use, not only in the setter, since deserialization bypasses both.
