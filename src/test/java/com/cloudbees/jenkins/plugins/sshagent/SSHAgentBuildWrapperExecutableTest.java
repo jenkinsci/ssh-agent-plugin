@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.sshagent;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import hudson.util.XStream2;
@@ -15,6 +16,16 @@ class SSHAgentBuildWrapperExecutableTest {
         assertNull(new SSHAgentBuildWrapper(List.of("dummy"), false, 1, "").getExecutable());
         assertNull(new SSHAgentBuildWrapper(List.of("dummy"), false, 1, "   ").getExecutable());
         assertNull(new SSHAgentBuildWrapper(List.of("dummy"), false, 1, null).getExecutable());
+    }
+
+    @Test
+    void nonBlankExecutableFromConstructorIsTrimmedAndRetained() {
+        assertEquals(
+                "/usr/bin/ssh-agent",
+                new SSHAgentBuildWrapper(List.of("dummy"), false, 1, "/usr/bin/ssh-agent").getExecutable());
+        assertEquals(
+                "/usr/bin/ssh-agent",
+                new SSHAgentBuildWrapper(List.of("dummy"), false, 1, "  /usr/bin/ssh-agent  ").getExecutable());
     }
 
     @Issue("https://github.com/jenkinsci/ssh-agent-plugin/issues/303")
@@ -34,6 +45,22 @@ class SSHAgentBuildWrapperExecutableTest {
                 + "</com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper>";
         SSHAgentBuildWrapper wrapper = (SSHAgentBuildWrapper) new XStream2().fromXML(legacyXml);
         assertNull(wrapper.getExecutable());
+    }
+
+    @Test
+    void configurationWithValidExecutableDeserializesUnchanged() {
+        // A config already carrying a valid, non-blank executable must survive readResolve()
+        // unchanged, confirming the blank-normalization check does not also touch valid values.
+        String xml = "<com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper>\n"
+                + "  <credentialIds>\n"
+                + "    <string>dummy</string>\n"
+                + "  </credentialIds>\n"
+                + "  <ignoreMissing>false</ignoreMissing>\n"
+                + "  <timeout>1</timeout>\n"
+                + "  <executable>/usr/bin/ssh-agent</executable>\n"
+                + "</com.cloudbees.jenkins.plugins.sshagent.SSHAgentBuildWrapper>";
+        SSHAgentBuildWrapper wrapper = (SSHAgentBuildWrapper) new XStream2().fromXML(xml);
+        assertEquals("/usr/bin/ssh-agent", wrapper.getExecutable());
     }
 
     @Issue("https://github.com/jenkinsci/ssh-agent-plugin/issues/303")
