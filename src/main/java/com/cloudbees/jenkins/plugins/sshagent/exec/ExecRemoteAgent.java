@@ -85,7 +85,7 @@ public final class ExecRemoteAgent implements Serializable {
     }
 
     private static Path toSSHAgentPath(String executable) {
-        if (executable == null) {
+        if (executable == null || executable.isBlank()) {
             return null;
         }
         Path path = Path.of(executable);

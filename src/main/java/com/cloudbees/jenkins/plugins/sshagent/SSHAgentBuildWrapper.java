@@ -154,7 +154,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         this.credentialIds = new ArrayList<>(new LinkedHashSet<>(credentialIds));
         this.ignoreMissing = ignoreMissing;
         this.timeout = timeout > 0 ? timeout : ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES;
-        this.executable = executable;
+        // The "Executable" field is optional; f:textbox submits an empty string rather than null
+        // when left blank, and ExecRemoteAgent rejects any non-null value that is not a valid
+        // ssh-agent(.exe) path. Normalize blank input to null so an unset field behaves like one.
+        this.executable = Util.fixEmptyAndTrim(executable);
     }
 
     /**
@@ -166,10 +169,15 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         if (user != null) {
             return new SSHAgentBuildWrapper(Collections.singletonList(user),false);
         }
-        if (timeout <= 0) {
+        String normalizedExecutable = Util.fixEmptyAndTrim(executable);
+        if (timeout <= 0 || !Objects.equals(executable, normalizedExecutable)) {
             // Configurations persisted before the timeout was configurable have no timeout value,
             // which deserializes to zero and would otherwise time out immediately. Restore the default.
-            return new SSHAgentBuildWrapper(credentialIds, ignoreMissing, ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES, executable);
+            // Configurations saved through the web UI with a blank "Executable" field persist it as
+            // an empty string rather than omitting it; normalize that back to null here too, since
+            // XStream sets fields directly and bypasses the constructor's own normalization.
+            return new SSHAgentBuildWrapper(credentialIds, ignoreMissing,
+                    timeout > 0 ? timeout : ExecRemoteAgent.DEFAULT_TIMEOUT_MINUTES, normalizedExecutable);
         }
         return this;
     }
