@@ -31,14 +31,13 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.TaskListener;
 import hudson.slaves.WorkspaceList;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -76,20 +75,20 @@ public final class ExecRemoteAgent implements Serializable {
         // A timeout of zero (or less) comes from job configurations persisted before the timeout
         // was configurable; treat it as the default rather than timing out immediately.
         this.timeoutMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
-        Path sshAgentPath = toSSHAgentPath(executablePath);
-        this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(Path::getParent).map(p -> p + File.separator)
-                .orElse("");
+        FilePath sshAgentPath = toSSHAgentPath(executablePath, launcher);
+        this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(FilePath::getParent)
+                .map(p -> p.getRemote() + (launcher.isUnix() ? '/' : '\\')).orElse("");
 
         String agentOut = executeCommand(p -> p.cmds("ssh-agent"), launcher, listener, true);
         agentEnv = parseAgentEnv(agentOut, listener); // TODO could include local filenames, better to look up remote charset
     }
 
-    private static Path toSSHAgentPath(String executable) {
+    private static FilePath toSSHAgentPath(String executable, Launcher launcher) {
         if (executable == null || executable.isBlank()) {
             return null;
         }
-        Path path = Path.of(executable);
-        if (!path.endsWith("ssh-agent") && !path.endsWith("ssh-agent.exe")) {
+        FilePath path = new FilePath(launcher.getChannel(), executable);
+        if (!Set.of("ssh-agent", "ssh-agent.exe").contains(path.getName())) {
             throw new IllegalArgumentException(
                     "Not an ssh-agent executable path (filename must be ssh-agent(.exe)): " + executable);
         }
