@@ -24,6 +24,7 @@ import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.matchesRegex;
 import static org.hamcrest.core.IsIterableContaining.hasItem;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
@@ -154,7 +155,8 @@ class SSHAgentBuildWrapperTest extends SSHAgentBase {
         Shell shell = new Shell("ssh -o StrictHostKeyChecking=no -p " + getAssignedPort() + " -v -l cloudbees " + SSH_SERVER_HOST);
         job.getBuildersList().add(shell);
 
-        r.assertLogContains("Failed to run ssh-add", r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get()));
+        assertThat(JenkinsRule.getLog(r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get())),
+                matchesRegex("(?sm).*^ERROR: Failed to run ([A-Z]:\\\\([\\w]+\\\\)+?)?ssh-add .*"));
 
         stopMockSSHServer();
     }

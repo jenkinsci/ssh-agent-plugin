@@ -55,7 +55,6 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
 
     @Test
     void sshAgentAvailable() throws Throwable {
-        assumeFalse(Functions.isWindows());
         story.then(j -> {
                 startMockSSHServer();
 
@@ -90,7 +89,6 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
      */
     @Test
     void teardownDoesNotFailBuildWhenAgentAlreadyStopped() throws Throwable {
-        assumeFalse(Functions.isWindows());
         story.then(j -> {
                 List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
@@ -124,7 +122,6 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
      */
     @Test
     void exposesCredentialUsernameViaUsernameVariable() throws Throwable {
-        assumeFalse(Functions.isWindows());
         story.then(j -> {
                 List<String> credentialIds = new ArrayList<>();
                 credentialIds.add(CREDENTIAL_ID);
@@ -161,7 +158,6 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
      */
     @Test
     void sshAgentAvailableAfterRestart() throws Throwable {
-        assumeFalse(Functions.isWindows());
         story.then(j -> {
                 startMockSSHServer();
 
@@ -267,7 +263,6 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
     @Issue("JENKINS-38830")
     @Test
     void testTrackingOfCredential() throws Throwable {
-        assumeFalse(Functions.isWindows());
         story.then(j -> {
                 startMockSSHServer();
 
