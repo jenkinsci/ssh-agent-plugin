@@ -10,9 +10,15 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
+import hudson.slaves.WorkspaceList;
 import hudson.util.Secret;
+import jenkins.MasterToSlaveFileCallable;
+import org.jenkinsci.plugins.gitclient.GitHostKeyVerificationConfiguration;
+import org.jenkinsci.plugins.gitclient.verifier.HostKeyVerifierFactory;
 import org.jenkinsci.plugins.workflow.steps.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -30,10 +36,20 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
     /** Username of the first resolved credential, captured when {@link #usernameVariable} is set. */
     private String username;
 
+    /** Whether Git host key verification is enabled for the block. Survives resume. */
+    private final boolean hostKeyVerification;
+
+    /** Computed {@code GIT_SSH_COMMAND} exposed inside the block when {@link #hostKeyVerification} is set. */
+    private String gitSshCommand;
+
+    /** Remote path of the temporary known_hosts file, kept so it can be cleaned up on stop. */
+    private String knownHostsPath;
+
     SSHAgentStepExecution(SSHAgentStep step, StepContext context) {
         super(context);
         this.step = step;
         this.usernameVariable = step.getUsernameVariable();
+        this.hostKeyVerification = step.isHostKeyVerification();
     }
 
     @Override
@@ -63,6 +79,13 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             if (listener != null && launcher != null) {
                 agent.stop(launcher, listener);
                 listener.getLogger().println(Messages.SSHAgentBuildWrapper_Stopped());
+                if (knownHostsPath != null) {
+                    try {
+                        new FilePath(launcher.getChannel(), knownHostsPath).delete();
+                    } catch (IOException | InterruptedException x) {
+                        listener.getLogger().println("Failed to delete temporary known_hosts file: " + x.getMessage());
+                    }
+                }
             }
         }
     }
@@ -99,6 +122,9 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             env.overrideAll(execution.agent.getEnv());
             if (execution.usernameVariable != null && execution.username != null) {
                 env.override(execution.usernameVariable, execution.username);
+            }
+            if (execution.gitSshCommand != null) {
+                env.override("GIT_SSH_COMMAND", execution.gitSshCommand);
             }
         }
     }
@@ -142,7 +168,55 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
             }
         }
 
+        if (hostKeyVerification) {
+            initHostKeyVerification(workspace, listener);
+        }
+
         listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
+    }
+
+    /**
+     * Sets up Git host key verification for the block by exposing {@code GIT_SSH_COMMAND} built from
+     * the git-client plugin's globally configured verification strategy. The ssh options are computed
+     * on the agent so that any temporary known_hosts file is created where the build runs.
+     */
+    private void initHostKeyVerification(FilePath workspace, TaskListener listener)
+            throws IOException, InterruptedException {
+        EnvVars contextEnv = getContext().get(EnvVars.class);
+        if (contextEnv != null && contextEnv.containsKey("GIT_SSH_COMMAND")) {
+            // Respect a GIT_SSH_COMMAND the user already set rather than silently replacing it.
+            listener.getLogger().println(
+                    "GIT_SSH_COMMAND is already set, so ssh-agent will not override it for host key verification.");
+            return;
+        }
+        HostKeyVerifierFactory verifier = GitHostKeyVerificationConfiguration.get()
+                .getSshHostKeyVerificationStrategy()
+                .getVerifier();
+        FilePath tempDir = WorkspaceList.tempDir(workspace);
+        if (tempDir == null) {
+            throw new IOException("No temp dir in " + workspace);
+        }
+        FilePath knownHosts = tempDir.createTempFile("known_hosts", "");
+        knownHostsPath = knownHosts.getRemote();
+        gitSshCommand = "ssh " + knownHosts.act(new VerifyHostKeyOption(verifier, listener));
+    }
+
+    private static final class VerifyHostKeyOption extends MasterToSlaveFileCallable<String> {
+
+        private static final long serialVersionUID = 1L;
+
+        private final HostKeyVerifierFactory verifier;
+        private final TaskListener listener;
+
+        VerifyHostKeyOption(HostKeyVerifierFactory verifier, TaskListener listener) {
+            this.verifier = verifier;
+            this.listener = listener;
+        }
+
+        @Override
+        public String invoke(File knownHosts, VirtualChannel channel) throws IOException {
+            return verifier.forCliGit(listener).getVerifyHostKeyOption(knownHosts.toPath());
+        }
     }
 
 }
