@@ -163,7 +163,8 @@ public final class ExecRemoteAgent implements Serializable {
                 Map<String,String> env = new HashMap<>(agentEnv);
                 if (passphrase != null) {
                     env.put("SSH_PASSPHRASE", passphrase);
-                    env.put("DISPLAY", "bogus"); // just to force using SSH_ASKPASS
+                    env.put("SSH_ASKPASS_REQUIRE", "force"); // force using SSH_ASKPASS
+                    env.put("DISPLAY", "bogus"); // legacy (and backwards compatible) way to force using SSH_ASKPASS
                     env.put("SSH_ASKPASS", askpass.getRemote());
                 }
                 
