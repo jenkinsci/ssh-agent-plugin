@@ -130,14 +130,14 @@ public final class ExecRemoteAgent implements Serializable {
                 "Executing with default ssh-agent on Windows is not supported and an alternative implementation from a git installation is not available."));
     }
 
-    private static final String GIT_EXE_PATH = "\\cmd\\git";
+    private static final Pattern GIT_EXE_PATH = Pattern.compile("\\\\(cmd|bin)\\\\git(\\.exe)?$");
     private static final String GIT_SSH_AGENT_PATH_WINDOWS = "usr\\bin\\ssh-agent.exe";
 
     private static Optional<FilePath> extractGitSSHAgentExe(Iterable<String> gitHomeOrExePaths, Launcher launcher)
             throws IOException, InterruptedException {
         for (String path : gitHomeOrExePaths) {
             Optional<FilePath> git = Optional.of(new FilePath(launcher.getChannel(), path));
-            if (path.endsWith(GIT_EXE_PATH + ".exe") || path.endsWith(GIT_EXE_PATH)) {
+            if (GIT_EXE_PATH.matcher(path).find()) {
                 git = git.map(FilePath::getParent).map(FilePath::getParent);
             }
             Optional<FilePath> sshAgentExe = git.map(p -> p.child(GIT_SSH_AGENT_PATH_WINDOWS));
