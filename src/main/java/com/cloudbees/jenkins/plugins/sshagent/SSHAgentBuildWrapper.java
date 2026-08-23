@@ -449,6 +449,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
         /**
          * Converts an array of value objects into a list of ids.
          *
+         * <p>The {@code f:repeatableProperty} widget used to render these value objects always
+         * submits at least one entry, even when the user has not picked a credential, so an id
+         * that is {@code null} or blank does not represent a real selection and is dropped.
+         *
          * @param credentialHolders the array of value objects.
          * @return the possibly empty but never null list of ids.
          */
@@ -457,7 +461,10 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
             List<String> result = new ArrayList<>(credentialHolders == null ? 0 : credentialHolders.length);
             if (credentialHolders != null) {
                 for (CredentialHolder h : credentialHolders) {
-                    result.add(h.getId());
+                    String id = Util.fixEmptyAndTrim(h.getId());
+                    if (id != null) {
+                        result.add(id);
+                    }
                 }
             }
             return result;
