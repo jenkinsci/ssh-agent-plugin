@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import hudson.AbortException;
 import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.Issue;
 
 class ExecRemoteAgentTest {
 
@@ -58,5 +59,22 @@ class ExecRemoteAgentTest {
         AbortException e = assertThrows(
                 AbortException.class, () -> ExecRemoteAgent.getAgentValue("SSH_AUTH_SOCK=/tmp/ssh/agent.1", "SSH_AUTH_SOCK"));
         assertThat(e.getMessage(), containsString("SSH_AUTH_SOCK"));
+    }
+
+    @Test
+    void toWindowsPathConvertsADriveLetterMount() {
+        assertEquals(
+                "C:\\Users\\jenkins\\AppData\\Local\\Temp\\ssh-abc\\agent.123",
+                ExecRemoteAgent.toWindowsPath("/c/Users/jenkins/AppData/Local/Temp/ssh-abc/agent.123"));
+    }
+
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/issues/309")
+    @Test
+    void toWindowsPathLeavesAnMsysVirtualMountUnchanged() {
+        // /tmp is a virtual MSYS mount point (defined in /etc/fstab inside the git installation),
+        // not a drive-letter path, so it has no real location that string substitution can find.
+        // Converting it used to produce a driveless, relative path that ssh-add could not resolve.
+        assertEquals(
+                "/tmp/ssh-kiwKu7uzgZkX/agent.792", ExecRemoteAgent.toWindowsPath("/tmp/ssh-kiwKu7uzgZkX/agent.792"));
     }
 }

@@ -281,11 +281,24 @@ public final class ExecRemoteAgent implements Serializable {
 
     private static final Pattern WINDOWS_DRIVE_LETTER_IN_UNIX_PATH = Pattern.compile("^/[a-zA-Z]/");
 
-    private static String toWindowsPath(String socketPath) {
-        if (WINDOWS_DRIVE_LETTER_IN_UNIX_PATH.matcher(socketPath).find()) {
-            char driveLetter = Character.toUpperCase(socketPath.charAt(1));
-            socketPath = driveLetter + ":\\" + socketPath.substring(3);
+    /**
+     * Converts a POSIX-style path reported by an MSYS {@code ssh-agent} into a Windows-style
+     * absolute path, when possible.
+     *
+     * <p>Only paths under a drive-letter mount (e.g. {@code /c/Users/...}) can be converted this
+     * way. A path under a virtual MSYS mount point such as {@code /tmp} or {@code /usr} has no
+     * real location that can be derived by string substitution, so it is returned unchanged
+     * rather than turned into a driveless, relative Windows path that {@code ssh-add} cannot
+     * resolve. The ssh-agent tools of a git installation accept the POSIX form just as well.
+     *
+     * @since 424
+     */
+    static String toWindowsPath(String socketPath) {
+        if (!WINDOWS_DRIVE_LETTER_IN_UNIX_PATH.matcher(socketPath).find()) {
+            return socketPath;
         }
+        char driveLetter = Character.toUpperCase(socketPath.charAt(1));
+        socketPath = driveLetter + ":\\" + socketPath.substring(3);
         return socketPath.replace('/', '\\');
     }
 
