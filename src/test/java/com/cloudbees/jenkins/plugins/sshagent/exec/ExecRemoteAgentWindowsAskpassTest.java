@@ -14,9 +14,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 
 /**
- * Exercises {@link ExecRemoteAgent#WINDOWS_ASKPASS_SCRIPT} against a real {@code cmd.exe},
- * since the whole point of the script is safely surviving cmd.exe's own re-parsing of the
- * passphrase. Only meaningful on Windows; skipped everywhere else.
+ * Exercises {@link ExecRemoteAgent#windowsAskpassScript} against a real {@code cmd.exe}, since
+ * the whole point of the script is printing the passphrase verbatim regardless of its content.
+ * Only meaningful on Windows; skipped everywhere else.
  */
 class ExecRemoteAgentWindowsAskpassTest {
 
@@ -25,10 +25,18 @@ class ExecRemoteAgentWindowsAskpassTest {
     void printsAPassphraseContainingBatchMetacharactersVerbatim(@TempDir File temp) throws Exception {
         assumeTrue(Functions.isWindows());
 
-        String trickyPassphrase = "p@ss&word|with^special<chars>too";
+        // & | < > are cmd.exe command-separator/redirect operators; ! is the delayed-expansion
+        // trigger character. All five previously had a way to corrupt the printed passphrase.
+        String trickyPassphrase = "p@ss&word|with^special<chars>!and!bangs!too";
+
+        File secretValue = new File(temp, "askpass_value_test.txt");
+        Files.writeString(secretValue.toPath(), trickyPassphrase + "\r\n", StandardCharsets.UTF_8);
 
         File askpass = new File(temp, "askpass_test.bat");
-        Files.writeString(askpass.toPath(), ExecRemoteAgent.WINDOWS_ASKPASS_SCRIPT, StandardCharsets.UTF_8);
+        Files.writeString(
+                askpass.toPath(),
+                ExecRemoteAgent.windowsAskpassScript(secretValue.getAbsolutePath()),
+                StandardCharsets.UTF_8);
 
         // Redirect to a file rather than reading the process's stdout pipe: the script's last
         // line detaches a "start /b" child to self-delete, which can inherit the stdout handle
@@ -36,7 +44,6 @@ class ExecRemoteAgentWindowsAskpassTest {
         // never comes. A file has no such handle-inheritance hazard.
         File outputFile = new File(temp, "output.txt");
         ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", askpass.getAbsolutePath());
-        pb.environment().put("SSH_PASSPHRASE", trickyPassphrase);
         pb.redirectOutput(outputFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
