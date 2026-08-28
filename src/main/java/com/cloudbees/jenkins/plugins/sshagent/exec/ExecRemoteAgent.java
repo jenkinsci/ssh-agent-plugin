@@ -329,14 +329,20 @@ public final class ExecRemoteAgent implements Serializable {
     /**
      * Creates a self-deleting script for SSH_ASKPASS. Self-deleting to be able to detect a wrong passphrase.
      */
+    // Delayed expansion (!VAR! instead of %VAR%) defers substitution of SSH_PASSPHRASE until
+    // after cmd.exe has already tokenized the line, so characters in the passphrase such as
+    // & or | are no longer re-parsed as command separators.
+    static final String WINDOWS_ASKPASS_SCRIPT = """
+            @setlocal enabledelayedexpansion
+            @ECHO !SSH_PASSPHRASE!
+            start /b cmd /c del "%~f0" & exit /b
+            """;
+
     private FilePath createAskpassScript(FilePath temp) throws IOException, InterruptedException {
         FilePath askpass;
         if (isWindowsAgent) {
             boolean pathContainsSpaces = temp.getRemote().contains(" ");
-            askpass = temp.createTextTempFile("askpass_", ".bat", """
-                    @ECHO %SSH_PASSPHRASE%
-                    start /b cmd /c del "%~f0" & exit /b
-                    """, !pathContainsSpaces);
+            askpass = temp.createTextTempFile("askpass_", ".bat", WINDOWS_ASKPASS_SCRIPT, !pathContainsSpaces);
         } else {
             askpass = temp.createTextTempFile("askpass_", ".sh", """
                     #!/bin/sh
