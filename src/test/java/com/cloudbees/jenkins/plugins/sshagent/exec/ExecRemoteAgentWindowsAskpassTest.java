@@ -30,14 +30,20 @@ class ExecRemoteAgentWindowsAskpassTest {
         File askpass = new File(temp, "askpass_test.bat");
         Files.writeString(askpass.toPath(), ExecRemoteAgent.WINDOWS_ASKPASS_SCRIPT, StandardCharsets.UTF_8);
 
+        // Redirect to a file rather than reading the process's stdout pipe: the script's last
+        // line detaches a "start /b" child to self-delete, which can inherit the stdout handle
+        // and keep it open after the parent exits, hanging a pipe read waiting for EOF that
+        // never comes. A file has no such handle-inheritance hazard.
+        File outputFile = new File(temp, "output.txt");
         ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", askpass.getAbsolutePath());
         pb.environment().put("SSH_PASSPHRASE", trickyPassphrase);
+        pb.redirectOutput(outputFile);
         pb.redirectErrorStream(true);
         Process p = pb.start();
-        String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         boolean finished = p.waitFor(30, TimeUnit.SECONDS);
+        String output = Files.readString(outputFile.toPath(), StandardCharsets.UTF_8);
 
-        assertEquals(trickyPassphrase, output.strip(), "cmd.exe output: " + output);
         assertTrue(finished, "askpass script did not exit within the timeout");
+        assertEquals(trickyPassphrase, output.strip(), "cmd.exe output: " + output);
     }
 }
