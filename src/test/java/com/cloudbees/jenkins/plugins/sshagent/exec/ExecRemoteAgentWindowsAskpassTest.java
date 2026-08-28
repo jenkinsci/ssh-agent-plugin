@@ -44,6 +44,11 @@ class ExecRemoteAgentWindowsAskpassTest {
         String output = Files.readString(outputFile.toPath(), StandardCharsets.UTF_8);
 
         assertTrue(finished, "askpass script did not exit within the timeout");
-        assertEquals(trickyPassphrase, output.strip(), "cmd.exe output: " + output);
+        // Only the first line matters: ssh-add's ASKPASS protocol reads one line for the
+        // passphrase. The self-delete line isn't @-prefixed, so cmd.exe echoes it (and its
+        // own "workdir>" prompt) as the command runs; that trailing noise is harmless in
+        // production but would fail a whole-output comparison here.
+        String firstLine = output.lines().findFirst().orElse("");
+        assertEquals(trickyPassphrase, firstLine, "cmd.exe output: " + output);
     }
 }
