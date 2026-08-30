@@ -1,61 +1,81 @@
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import hudson.Functions;
-import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 
+import hudson.FilePath;
+import hudson.Functions;
+
+
 /**
- * Exercises {@link ExecRemoteAgent#windowsAskpassScript} against a real {@code cmd.exe}, since
- * the whole point of the script is printing the passphrase verbatim regardless of its content.
- * Only meaningful on Windows; skipped everywhere else.
+ * Exercises {@link ExecRemoteAgent#createAskpassScript} against a real {@code cmd.exe},
+ * since the whole point of the script is safely surviving cmd.exe's own re-parsing of the
+ * passphrase. Only meaningful on Windows; skipped everywhere else.
  */
 class ExecRemoteAgentWindowsAskpassTest {
 
     @Issue("https://github.com/jenkinsci/ssh-agent-plugin/issues/311")
     @Test
-    void printsAPassphraseContainingBatchMetacharactersVerbatim(@TempDir File temp) throws Exception {
+    void printsPassphraseContainingWindowsBatchMetacharactersVerbatim() throws Exception {
         assumeTrue(Functions.isWindows());
 
         // & | < > are cmd.exe command-separator/redirect operators; ! is the delayed-expansion
         // trigger character. All five previously had a way to corrupt the printed passphrase.
         String trickyPassphrase = "p@ss&word|with^special<chars>!and!bangs!too";
 
-        File secretValue = new File(temp, "askpass_value_test.txt");
-        Files.writeString(secretValue.toPath(), trickyPassphrase + "\r\n", StandardCharsets.UTF_8);
+        testVerbatimPassphrasePrinting(trickyPassphrase);
+    }
 
-        File askpass = new File(temp, "askpass_test.bat");
-        Files.writeString(
-                askpass.toPath(),
-                ExecRemoteAgent.windowsAskpassScript(secretValue.getAbsolutePath()),
-                StandardCharsets.UTF_8);
+    @Test
+    void printsPassphraseContainingWindowsEchoHelpCommand() throws Exception {
+        // Under Windows the help for the echo command is printed by: echo /?
+        testVerbatimPassphrasePrinting("/?");
+    }
+
+    @Test
+    void printsEmptyPassphrase() throws Exception {
+        testVerbatimPassphrasePrinting("");
+    }
+
+    @TempDir
+    Path temp;
+
+    private void testVerbatimPassphrasePrinting(String passphrase) throws Exception {
+        boolean isWindows = Functions.isWindows();
+        FilePath tempFile = new FilePath(temp.toFile());
+        FilePath askpass = ExecRemoteAgent.createAskpassScript(tempFile, isWindows);
 
         // Redirect to a file rather than reading the process's stdout pipe: the script's last
         // line detaches a "start /b" child to self-delete, which can inherit the stdout handle
         // and keep it open after the parent exits, hanging a pipe read waiting for EOF that
         // never comes. A file has no such handle-inheritance hazard.
-        File outputFile = new File(temp, "output.txt");
-        ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", askpass.getAbsolutePath());
-        pb.redirectOutput(outputFile);
+        Path outputFile = Files.createTempFile("output", "txt");
+        ProcessBuilder pb = new ProcessBuilder(askpass.getRemote());
+        pb.environment().put("SSH_PASSPHRASE", passphrase);
+        pb.redirectOutput(outputFile.toFile());
         pb.redirectErrorStream(true);
         Process p = pb.start();
         boolean finished = p.waitFor(30, TimeUnit.SECONDS);
-        String output = Files.readString(outputFile.toPath(), StandardCharsets.UTF_8);
+        String output = Files.readString(outputFile);
 
         assertTrue(finished, "askpass script did not exit within the timeout");
-        // Only the first line matters: ssh-add's ASKPASS protocol reads one line for the
-        // passphrase. The self-delete line isn't @-prefixed, so cmd.exe echoes it (and its
-        // own "workdir>" prompt) as the command runs; that trailing noise is harmless in
-        // production but would fail a whole-output comparison here.
-        String firstLine = output.lines().findFirst().orElse("");
-        assertEquals(trickyPassphrase, firstLine, "cmd.exe output: " + output);
+        assertEquals(passphrase + System.lineSeparator(), output, "askpass output: " + output);
+
+        // Await sub-process termination.
+        // On Windows script deletion is done in a sub-process.
+        for (var childTermination : p.descendants().map(ProcessHandle::onExit).toList()) {
+            childTermination.get();
+        }
+        assertFalse(askpass.exists(), "askpass script did not delete itself");
     }
 }

@@ -210,15 +210,15 @@ public final class ExecRemoteAgent implements Serializable {
         try {
             keyFile.chmod(0600);
 
-            AskpassFiles askpass = passphrase != null ? createAskpassScript(temp, passphrase) : null;
+            FilePath askpass = null;
             try {
-
                 Map<String,String> env = new HashMap<>(agentEnv);
                 if (passphrase != null) {
+                    askpass = createAskpassScript(temp, isWindowsAgent);
                     env.put("SSH_PASSPHRASE", passphrase);
                     env.put("SSH_ASKPASS_REQUIRE", "force"); // force using SSH_ASKPASS
                     env.put("DISPLAY", "bogus"); // legacy (and backwards compatible) way to force using SSH_ASKPASS
-                    env.put("SSH_ASKPASS", askpass.script().getRemote());
+                    env.put("SSH_ASKPASS", askpass.getRemote());
                 }
 
                 // as the next command is in quiet mode, we just add a message to the log
@@ -227,15 +227,8 @@ public final class ExecRemoteAgent implements Serializable {
                 executeCommand(p -> p.quiet(true).cmds("ssh-add", keyFile.getRemote()).envs(env).stdout(listener),
                         launcher, listener, true);
             } finally {
-                // The ASKPASS script (and, on Windows, the file holding the passphrase itself)
-                // are self-deleting, anyway rather try to delete them in case of some error.
-                if (askpass != null) {
-                    if (askpass.script().exists()) {
-                        askpass.script().delete();
-                    }
-                    if (askpass.secretValue() != null && askpass.secretValue().exists()) {
-                        askpass.secretValue().delete();
-                    }
+                if (askpass != null && askpass.exists()) { // the ASKPASS script is self-deleting, anyway rather try to delete it in case of some error
+                    askpass.delete();
                 }
             }
         } finally {
@@ -332,56 +325,35 @@ public final class ExecRemoteAgent implements Serializable {
         }
         return agentOutput.substring(pos, end);
     }
-    
-    /**
-     * The ASKPASS script, plus (on Windows only) the file holding the passphrase itself.
-     *
-     * @param script      the executable ASKPASS script.
-     * @param secretValue the file {@code script} reads the passphrase from verbatim via
-     *                    {@code TYPE}, or {@code null} on platforms where the script instead
-     *                    reads the {@code SSH_PASSPHRASE} environment variable.
-     */
-    private record AskpassFiles(FilePath script, FilePath secretValue) {
-    }
-
-    /**
-     * Builds the Windows ASKPASS batch script that {@code TYPE}s the passphrase from
-     * {@code secretValuePath} rather than substituting it into the command line.
-     *
-     * <p>A passphrase cannot be safely substituted into a batch command line at all: {@code %VAR%}
-     * expands before cmd.exe finishes tokenizing (so {@code &}, {@code |}, {@code <}, {@code >}
-     * get re-parsed as operators), and even {@code !VAR!} delayed expansion is unsafe for a
-     * literal {@code !} in the value. Reading the passphrase from its own file with {@code TYPE}
-     * sidesteps command-line parsing entirely, so no character in the passphrase needs to be
-     * safe for batch syntax.
-     *
-     * @since 431
-     */
-    static String windowsAskpassScript(String secretValuePath) {
-        return "@TYPE \"" + secretValuePath + "\"\n"
-                + "start /b cmd /c del \"" + secretValuePath + "\" \"%~f0\" & exit /b\n";
-    }
 
     /**
      * Creates a self-deleting script for SSH_ASKPASS. Self-deleting to be able to detect a wrong passphrase.
      */
-    private AskpassFiles createAskpassScript(FilePath temp, String passphrase) throws IOException, InterruptedException {
+    static FilePath createAskpassScript(FilePath temp, boolean isWindowsAgent)
+            throws IOException, InterruptedException {
+        FilePath askpass;
         if (isWindowsAgent) {
             boolean pathContainsSpaces = temp.getRemote().contains(" ");
-            FilePath secretValue = temp.createTextTempFile("askpass_value_", ".txt", passphrase + "\r\n", !pathContainsSpaces);
-            FilePath script = temp.createTextTempFile(
-                    "askpass_", ".bat", windowsAskpassScript(secretValue.getRemote()), !pathContainsSpaces);
-            return new AskpassFiles(script, secretValue);
+            // Delayed expansion (!VAR! instead of %VAR%) defers substitution of SSH_PASSPHRASE until
+            // after cmd.exe has already tokenized the line, so characters in the passphrase such as
+            // & or | are no longer re-parsed as command separators.
+            // See https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setlocal#parameters
+            // Using echo( ensures empty passphrases or those containing ! work too
+            askpass = temp.createTextTempFile("askpass_", ".bat", """
+                    @SetLocal EnableDelayedExpansion
+                    @ECHO(!SSH_PASSPHRASE!
+                    @start /b cmd /c del "%~f0" & exit /b
+                    """, !pathContainsSpaces);
         } else {
-            FilePath script = temp.createTextTempFile("askpass_", ".sh", """
+            askpass = temp.createTextTempFile("askpass_", ".sh", """
                     #!/bin/sh
                     echo "$SSH_PASSPHRASE"
                     rm "$0"
                     """);
             // executable only for a current user
-            script.chmod(0700);
-            return new AskpassFiles(script, null);
+            askpass.chmod(0700);
         }
+        return askpass;
     }
 
     // --- utility methods ---
