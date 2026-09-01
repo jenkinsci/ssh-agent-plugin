@@ -53,6 +53,7 @@ import java.util.regex.Pattern;
 public final class ExecRemoteAgent implements Serializable {
     private static final String AuthSocketVar = "SSH_AUTH_SOCK";
     private static final String AgentPidVar = "SSH_AGENT_PID";
+    private static final String SSHAGENT_USR_BIN_PATH_EXTENSION = "PATH+SSH_AGENT_USR_BIN";
 
     /** Default timeout, in minutes, applied to the agent commands when none is configured. */
     public static final int DEFAULT_TIMEOUT_MINUTES = 1;
@@ -84,14 +85,19 @@ public final class ExecRemoteAgent implements Serializable {
         // was configurable; treat it as the default rather than timing out immediately.
         this.timeoutMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
         this.isWindowsAgent = isWindowsAgent(launcher, listener);
-        FilePath sshAgentPath = executablePath == null && isWindowsAgent
-                ? searchSSHAgentExeForWindows(launcher, listener)
+        boolean isGitSSHAgentUsed = executablePath == null && isWindowsAgent;
+        FilePath sshAgentPath = isGitSSHAgentUsed ? searchSSHAgentExeForWindows(launcher, listener)
                 : toSSHAgentPath(executablePath, launcher);
         this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(FilePath::getParent)
                 .map(p -> p.getRemote() + (launcher.isUnix() ? '/' : '\\')).orElse("");
 
         String agentOut = executeCommand(p -> p.cmds("ssh-agent"), launcher, listener, true);
         agentEnv = parseAgentEnv(agentOut, listener); // TODO could include local filenames, better to look up remote charset
+        if (isGitSSHAgentUsed) {
+            // Prepend <git-home>\\usr\\bin to PATH to ease ssh tool usage within sshagent block
+            agentEnv.put(SSHAGENT_USR_BIN_PATH_EXTENSION, this.sshAgentBin);
+            listener.getLogger().println(SSHAGENT_USR_BIN_PATH_EXTENSION + "=" + this.sshAgentBin);
+        }
     }
 
     private static FilePath toSSHAgentPath(String executable, Launcher launcher) {
