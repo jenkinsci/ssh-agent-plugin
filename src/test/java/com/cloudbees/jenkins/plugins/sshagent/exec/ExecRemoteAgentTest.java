@@ -27,11 +27,20 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import hudson.AbortException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
+
+import hudson.AbortException;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.util.StreamTaskListener;
 
 class ExecRemoteAgentTest {
 
@@ -76,5 +85,43 @@ class ExecRemoteAgentTest {
         // Converting it used to produce a driveless, relative path that ssh-add could not resolve.
         assertEquals(
                 "/tmp/ssh-kiwKu7uzgZkX/agent.792", ExecRemoteAgent.toWindowsPath("/tmp/ssh-kiwKu7uzgZkX/agent.792"));
+    }
+
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/issues/227")
+    @Test
+    void findOnPathLocatesTheExecutableOnAPathEntry(@TempDir Path tempDir) throws Exception {
+        Path binDir = Files.createDirectory(tempDir.resolve("bin"));
+        Path executable = Files.createFile(binDir.resolve("ssh-agent"));
+
+        FilePath found = ExecRemoteAgent.findOnPath("ssh-agent", binDir.toString(), localLauncher());
+
+        assertEquals(executable.toString(), found.getRemote());
+    }
+
+    @Test
+    void findOnPathSearchesEachColonSeparatedDirectoryInOrder(@TempDir Path tempDir) throws Exception {
+        Path emptyDir = Files.createDirectory(tempDir.resolve("empty"));
+        Path binDir = Files.createDirectory(tempDir.resolve("bin"));
+        Path executable = Files.createFile(binDir.resolve("ssh-agent"));
+        String path = emptyDir + ":" + binDir;
+
+        FilePath found = ExecRemoteAgent.findOnPath("ssh-agent", path, localLauncher());
+
+        assertEquals(executable.toString(), found.getRemote());
+    }
+
+    @Test
+    void findOnPathReturnsNullWhenPathIsUnset() throws Exception {
+        assertNull(ExecRemoteAgent.findOnPath("ssh-agent", null, localLauncher()));
+        assertNull(ExecRemoteAgent.findOnPath("ssh-agent", "", localLauncher()));
+    }
+
+    @Test
+    void findOnPathReturnsNullWhenNoDirectoryHasTheExecutable(@TempDir Path tempDir) throws Exception {
+        assertNull(ExecRemoteAgent.findOnPath("ssh-agent", tempDir.toString(), localLauncher()));
+    }
+
+    private static Launcher localLauncher() {
+        return new Launcher.LocalLauncher(StreamTaskListener.NULL);
     }
 }

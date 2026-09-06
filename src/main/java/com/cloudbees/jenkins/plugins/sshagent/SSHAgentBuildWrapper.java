@@ -31,6 +31,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -310,7 +311,7 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
     private SSHAgentEnvironment createSSHAgentEnvironment(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         try {
-            return new SSHAgentEnvironment(launcher, listener, build.getWorkspace());
+            return new SSHAgentEnvironment(launcher, listener, build.getWorkspace(), build.getEnvironment(listener));
         } catch (InterruptedException e) {
             e.printStackTrace(listener.fatalError(Messages.SSHAgentBuildWrapper_CouldNotStartAgent()));
             throw e;
@@ -368,13 +369,14 @@ public class SSHAgentBuildWrapper extends BuildWrapper {
 
         private final BuildListener listener;
 
-        SSHAgentEnvironment(Launcher launcher, BuildListener listener, FilePath workspace) throws Throwable {
+        SSHAgentEnvironment(Launcher launcher, BuildListener listener, FilePath workspace, EnvVars contextEnv)
+                throws Throwable {
             this.launcher = launcher;
             this.workspace = Objects.requireNonNull(workspace);
             this.listener = listener;
             listener.getLogger().println("[ssh-agent] Looking for ssh-agent implementation...");
             agent = new ExecRemoteAgent(launcher, listener, SSHAgentBuildWrapper.this.timeout,
-                    SSHAgentBuildWrapper.this.executable);
+                    SSHAgentBuildWrapper.this.executable, contextEnv);
             listener.getLogger().println(Messages.SSHAgentBuildWrapper_Started());
         }
 
