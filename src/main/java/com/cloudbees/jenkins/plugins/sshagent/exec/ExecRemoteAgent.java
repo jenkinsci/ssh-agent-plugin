@@ -25,6 +25,7 @@
 package com.cloudbees.jenkins.plugins.sshagent.exec;
 
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Launcher;
@@ -61,6 +62,9 @@ public final class ExecRemoteAgent implements Serializable {
     /** Agent environment used for {@code ssh-add} and {@code ssh-agent -k}. */
     private final Map<String, String> agentEnv;
 
+    /** Environment of the step or build the agent was started for. Never {@code null}. */
+    private final EnvVars contextEnv;
+
     /** Timeout, in minutes, for the {@code ssh-agent}, {@code ssh-add} and {@code ssh-agent -k} commands. */
     private final int timeoutMinutes;
 
@@ -81,23 +85,90 @@ public final class ExecRemoteAgent implements Serializable {
      */
     public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes, String executablePath)
             throws IOException, InterruptedException {
+        this(launcher, listener, timeoutMinutes, executablePath, new EnvVars());
+    }
+
+    /**
+     * Launches a native {@code ssh-agent}.
+     *
+     * @param launcher       launches the agent process.
+     * @param listener       for logging.
+     * @param timeoutMinutes how long, in minutes, to wait for each of the {@code ssh-agent},
+     *                       {@code ssh-add} and {@code ssh-agent -k} commands before giving up.
+     * @param executablePath the path to the ssh-agent executable (may be relative) or null to use the default.
+     * @param contextEnv     the environment of the step or build the agent is started for, or {@code null}.
+     *                       A custom {@code PATH} in it (e.g. set via {@code withEnv}) is honored when
+     *                       looking up the default {@code ssh-agent} executable, and its other variables
+     *                       are passed to the {@code ssh-agent}/{@code ssh-add} commands.
+     * @since 431
+     */
+    public ExecRemoteAgent(Launcher launcher, TaskListener listener, int timeoutMinutes, String executablePath,
+            EnvVars contextEnv) throws IOException, InterruptedException {
         // A timeout of zero (or less) comes from job configurations persisted before the timeout
         // was configurable; treat it as the default rather than timing out immediately.
         this.timeoutMinutes = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_TIMEOUT_MINUTES;
+        this.contextEnv = contextEnv != null ? contextEnv : new EnvVars();
         this.isWindowsAgent = isWindowsAgent(launcher, listener);
         boolean isGitSSHAgentUsed = executablePath == null && isWindowsAgent;
         FilePath sshAgentPath = isGitSSHAgentUsed ? searchSSHAgentExeForWindows(launcher, listener)
                 : toSSHAgentPath(executablePath, launcher);
-        this.sshAgentBin = Optional.ofNullable(sshAgentPath).map(FilePath::getParent)
-                .map(p -> p.getRemote() + (launcher.isUnix() ? '/' : '\\')).orElse("");
+        String bin = toBinPrefix(sshAgentPath, launcher);
 
-        String agentOut = executeCommand(p -> p.cmds("ssh-agent"), launcher, listener, true);
+        String agentOut;
+        try {
+            agentOut = executeCommand(p -> p.cmds("ssh-agent").envs(this.contextEnv), launcher, listener, true, bin);
+        } catch (IOException e) {
+            // "ssh-agent" could not even be started via the default lookup, which resolves a bare
+            // command name against the launcher process' own ambient PATH, not the environment
+            // passed to the launched process (see issue #227). If the step/build has a custom PATH
+            // (e.g. set via withEnv) that was not considered so far, retry once by resolving
+            // ssh-agent against that PATH explicitly, instead of failing outright. Only attempted
+            // for the non-Windows default case: an explicit executablePath is already resolved
+            // above, and Windows already has its own git-based search independent of PATH.
+            FilePath resolved = executablePath == null && !isGitSSHAgentUsed
+                    ? findOnPath("ssh-agent", this.contextEnv.get("PATH"), launcher) : null;
+            if (resolved == null) {
+                throw e;
+            }
+            bin = toBinPrefix(resolved, launcher);
+            agentOut = executeCommand(p -> p.cmds("ssh-agent").envs(this.contextEnv), launcher, listener, true, bin);
+        }
+        this.sshAgentBin = bin;
         agentEnv = parseAgentEnv(agentOut, listener); // TODO could include local filenames, better to look up remote charset
         if (isGitSSHAgentUsed) {
             // Prepend <git-home>\\usr\\bin to PATH to ease ssh tool usage within sshagent block
             agentEnv.put(SSHAGENT_USR_BIN_PATH_EXTENSION, this.sshAgentBin);
             listener.getLogger().println(SSHAGENT_USR_BIN_PATH_EXTENSION + "=" + this.sshAgentBin);
         }
+    }
+
+    private static String toBinPrefix(FilePath sshAgentPath, Launcher launcher) {
+        return Optional.ofNullable(sshAgentPath).map(FilePath::getParent)
+                .map(p -> p.getRemote() + (launcher.isUnix() ? '/' : '\\')).orElse("");
+    }
+
+    /**
+     * Locates {@code executableName} on the directories listed in {@code pathValue}.
+     *
+     * @return the found executable, or {@code null} if {@code pathValue} is unset/blank or no match
+     *         was found, in which case the caller keeps the previous default behaviour of launching
+     *         the bare command name (resolved against the launcher process' own ambient PATH).
+     */
+    static FilePath findOnPath(String executableName, String pathValue, Launcher launcher)
+            throws IOException, InterruptedException {
+        if (pathValue == null || pathValue.isBlank()) {
+            return null;
+        }
+        for (String dir : pathValue.split(":", -1)) {
+            if (dir.isBlank()) {
+                continue;
+            }
+            FilePath candidate = new FilePath(launcher.getChannel(), dir).child(executableName);
+            if (candidate.exists()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private static FilePath toSSHAgentPath(String executable, Launcher launcher) {
@@ -129,7 +200,7 @@ public final class ExecRemoteAgent implements Serializable {
         } catch (NoClassDefFoundError e) { // git plugin is absent -> ignore
         }
         // Search a local git installation
-        String gitPaths = executeCommand(p -> p.cmds("where", "git").quiet(true), launcher, listener, true);
+        String gitPaths = executeCommand(p -> p.cmds("where", "git").quiet(true), launcher, listener, true, "");
         Optional<FilePath> sshAgentExe = extractGitSSHAgentExe(gitPaths.lines().filter(l -> !l.isEmpty())::iterator,
                 launcher);
         return sshAgentExe.orElseThrow(() -> new IllegalStateException(
@@ -156,13 +227,18 @@ public final class ExecRemoteAgent implements Serializable {
 
     private String executeCommand(Consumer<ProcStarter> processConfig, Launcher launcher, TaskListener listener,
             boolean failOnError) throws IOException, InterruptedException {
+        return executeCommand(processConfig, launcher, listener, failOnError, sshAgentBin);
+    }
+
+    private String executeCommand(Consumer<ProcStarter> processConfig, Launcher launcher, TaskListener listener,
+            boolean failOnError, String binPrefix) throws IOException, InterruptedException {
         ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         ProcStarter starter = launcher.launch().stdout(stdOut).stderr(stderr);
         processConfig.accept(starter);
         String cmd = starter.cmds().get(0); // assume first argument is program name
         if (cmd.startsWith("ssh-")) {
-            starter.cmds().set(0, sshAgentBin + cmd); // Prefix ssh agent commands with user-specified prefix
+            starter.cmds().set(0, binPrefix + cmd); // Prefix ssh agent commands with user-specified prefix
         }
         int status = starter.start().joinWithTimeout(timeoutMinutes, TimeUnit.MINUTES, listener);
         if (status != 0) {
@@ -218,7 +294,8 @@ public final class ExecRemoteAgent implements Serializable {
 
             FilePath askpass = null;
             try {
-                Map<String,String> env = new HashMap<>(agentEnv);
+                Map<String,String> env = new HashMap<>(contextEnv);
+                env.putAll(agentEnv); // ssh-agent's own values take precedence over same-named pipeline vars
                 if (passphrase != null) {
                     askpass = createAskpassScript(temp, isWindowsAgent);
                     env.put("SSH_PASSPHRASE", passphrase);
@@ -256,7 +333,9 @@ public final class ExecRemoteAgent implements Serializable {
      * @param listener for logging.
      */
     public void stop(Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
-        executeCommand(p -> p.cmds("ssh-agent", "-k").envs(agentEnv).stdout(listener), launcher, listener, false);
+        Map<String, String> env = new HashMap<>(contextEnv);
+        env.putAll(agentEnv); // ssh-agent's own values take precedence over same-named pipeline vars
+        executeCommand(p -> p.cmds("ssh-agent", "-k").envs(env).stdout(listener), launcher, listener, false);
     }
     
     /**
