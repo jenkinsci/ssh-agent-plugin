@@ -8,42 +8,60 @@ import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Computer;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.slaves.WorkspaceList;
 import hudson.util.Secret;
 import jenkins.MasterToSlaveFileCallable;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.gitclient.GitHostKeyVerificationConfiguration;
 import org.jenkinsci.plugins.gitclient.verifier.HostKeyVerifierFactory;
-import org.jenkinsci.plugins.workflow.steps.*;
+import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
+import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
+import org.jenkinsci.plugins.workflow.steps.GeneralNonBlockingStepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.springframework.security.core.Authentication;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
+final class SSHAgentStepExecution extends GeneralNonBlockingStepExecution {
 
     private static final long serialVersionUID = 1L;
 
+    private static final Logger LOGGER = Logger.getLogger(SSHAgentStepExecution.class.getName());
+
     private transient SSHAgentStep step;
 
-    private ExecRemoteAgent agent;
+    /**
+     * Written by {@link #initRemoteAgent} on a background thread, read when the block ends or when
+     * the step is stopped from another thread, so accesses must be visible across threads.
+     */
+    private volatile ExecRemoteAgent agent;
 
     /** Optional environment variable to expose the credential username under. Survives resume. */
     private final String usernameVariable;
 
     /** Username of the first resolved credential, captured when {@link #usernameVariable} is set. */
-    private String username;
+    private volatile String username;
 
     /** Whether Git host key verification is enabled for the block. Survives resume. */
     private final boolean hostKeyVerification;
 
     /** Computed {@code GIT_SSH_COMMAND} exposed inside the block when {@link #hostKeyVerification} is set. */
-    private String gitSshCommand;
+    private volatile String gitSshCommand;
 
     /** Remote path of the temporary known_hosts file, kept so it can be cleaned up on stop. */
-    private String knownHostsPath;
+    private volatile String knownHostsPath;
 
     SSHAgentStepExecution(SSHAgentStep step, StepContext context) {
         super(context);
@@ -52,27 +70,55 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         this.hostKeyVerification = step.isHostKeyVerification();
     }
 
+    /**
+     * Launching {@code ssh-agent} and running {@code ssh-add} are remote process executions that can
+     * each take up to {@link SSHAgentStep#getTimeoutMinutes()} minutes. Running them from the CPS VM
+     * thread stalls every other branch of a {@code parallel} block and leaves the build unable to
+     * respond to an abort, so the work is handed to a background thread instead.
+     */
     @Override
     public boolean start() throws Exception {
+        run(this::doStart);
+        return false;
+    }
+
+    private void doStart() throws Exception {
         StepContext context = getContext();
         initRemoteAgent();
         context.newBodyInvoker().
-                withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), new ExpanderImpl(this))).
-                withCallback(new Callback(this)).start();
-        return false;
+                withContext(EnvironmentExpander.merge(context.get(EnvironmentExpander.class), new ExpanderImpl(this))).
+                withCallback(new Callback()).start();
     }
 
     @Override
     public void stop(@NonNull Throwable cause) throws Exception {
-        try {
-            stop();
-        } catch (Exception x) {
-            cause.addSuppressed(x);
-        }
         super.stop(cause);
+        stopAgentAsync(cause);
     }
 
-    private void stop() throws Exception {
+    /**
+     * Tears the agent down after the step has been stopped. {@link #run} is a no-op once a stop cause
+     * has been recorded, and {@link #stop} itself must return promptly, so the {@code ssh-agent -k}
+     * is submitted to a separate thread with the caller's authentication restored.
+     */
+    private void stopAgentAsync(Throwable cause) {
+        if (agent == null) {
+            return;
+        }
+        Authentication auth = Jenkins.getAuthentication2();
+        Computer.threadPoolForRemoting.submit(() -> {
+            try (ACLContext ignored = ACL.as2(auth)) {
+                stopAgent();
+            } catch (Exception x) {
+                if (cause != null) {
+                    cause.addSuppressed(x);
+                }
+                LOGGER.log(Level.WARNING, "Failed to stop ssh-agent", x);
+            }
+        });
+    }
+
+    private void stopAgent() throws Exception {
         if (agent != null) {
             TaskListener listener = getContext().get(TaskListener.class);
             Launcher launcher = getContext().get(Launcher.class);
@@ -90,19 +136,18 @@ final class SSHAgentStepExecution extends AbstractStepExecutionImpl {
         }
     }
 
-    private static class Callback extends BodyExecutionCallback.TailCall {
+    /**
+     * Extends {@link GeneralNonBlockingStepExecution.TailCall} rather than
+     * {@link BodyExecutionCallback.TailCall} so that the {@code ssh-agent -k} at the end of the block
+     * also runs off the CPS VM thread.
+     */
+    private class Callback extends TailCall {
 
         private static final long serialVersionUID = 1L;
 
-        private final SSHAgentStepExecution execution;
-
-        Callback (SSHAgentStepExecution execution) {
-            this.execution = execution;
-        }
-
         @Override
         protected void finished(StepContext context) throws Exception {
-            execution.stop();
+            stopAgent();
         }
 
     }
