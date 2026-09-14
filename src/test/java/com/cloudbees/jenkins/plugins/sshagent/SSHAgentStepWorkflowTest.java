@@ -19,9 +19,12 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -425,6 +428,65 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
                 // The command is always prefixed with "ssh " by the plugin; the exact verify options
                 // come from git-client and are not asserted here to keep this independent of its version.
                 j.assertLogContains("GSC=ssh ", run);
+            }
+        );
+    }
+
+    /**
+     * Launching {@code ssh-agent} must not occupy the CPS VM thread. A stand-in {@code ssh-agent}
+     * blocks until released, and a sibling {@code parallel} branch has to keep running meanwhile.
+     */
+    @Test
+    void agentStartDoesNotBlockCpsVm(@TempDir Path tmp) throws Throwable {
+        assumeFalse(Functions.isWindows());
+
+        Path started = tmp.resolve("started");
+        Path release = tmp.resolve("release");
+        Path sshAgent = tmp.resolve("ssh-agent");
+        Files.writeString(sshAgent, """
+                #!/bin/sh
+                # Teardown must not block, only the initial launch does.
+                if [ "$1" = "-k" ]; then
+                  exit 0
+                fi
+                touch '%s'
+                while [ ! -f '%s' ]; do sleep 0.2; done
+                echo 'SSH_AUTH_SOCK=%s; export SSH_AUTH_SOCK;'
+                echo 'SSH_AGENT_PID=4242; export SSH_AGENT_PID;'
+                """.formatted(started, release, tmp.resolve("agent.sock")));
+        assertTrue(sshAgent.toFile().setExecutable(true));
+
+        story.then(j -> {
+                WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "agentStartDoesNotBlockCpsVm");
+                job.setDefinition(new CpsFlowDefinition(""
+                        + "node('" + j.createSlave().getNodeName() + "') {\n"
+                        + "  parallel(\n"
+                        + "    agent: {\n"
+                        + "      sshagent (credentials: [], executable: '" + sshAgent + "') {\n"
+                        + "        echo 'inside the block'\n"
+                        + "      }\n"
+                        + "    },\n"
+                        + "    other: {\n"
+                        + "      echo 'other branch ran'\n"
+                        + "    }\n"
+                        + "  )\n"
+                        + "}\n", true)
+                );
+                WorkflowRun b = job.scheduleBuild2(0).waitForStart();
+
+                long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(1);
+                while (!Files.exists(started) && System.nanoTime() < deadline) {
+                    Thread.sleep(100);
+                }
+                assertTrue(Files.exists(started), "ssh-agent should have been launched");
+
+                // Fails before the step became non-blocking: the CPS VM thread was parked in
+                // ssh-agent, so the sibling branch could not reach its echo.
+                j.waitForMessage("other branch ran", b);
+
+                Files.createFile(release);
+                j.assertBuildStatusSuccess(j.waitForCompletion(b));
+                j.assertLogContains("inside the block", b);
             }
         );
     }
