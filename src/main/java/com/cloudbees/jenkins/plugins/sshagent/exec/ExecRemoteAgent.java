@@ -137,18 +137,25 @@ public final class ExecRemoteAgent implements Serializable {
     }
 
     private static final Pattern GIT_EXE_PATH = Pattern.compile("\\\\(cmd|bin)\\\\git(\\.exe)?$");
-    private static final String GIT_SSH_AGENT_PATH_WINDOWS = "usr\\bin\\ssh-agent.exe";
+    // Git-for-Windows places ssh-agent.exe under <git-home>/usr/bin/.
+    // Cygwin places it directly under <cygwin-root>/bin/ with no usr/ prefix.
+    private static final List<String> GIT_SSH_AGENT_CANDIDATE_PATHS_WINDOWS =
+            List.of("usr\\bin\\ssh-agent.exe", "bin\\ssh-agent.exe");
 
-    private static Optional<FilePath> extractGitSSHAgentExe(Iterable<String> gitHomeOrExePaths, Launcher launcher)
+    static Optional<FilePath> extractGitSSHAgentExe(Iterable<String> gitHomeOrExePaths, Launcher launcher)
             throws IOException, InterruptedException {
         for (String path : gitHomeOrExePaths) {
             Optional<FilePath> git = Optional.of(new FilePath(launcher.getChannel(), path));
             if (GIT_EXE_PATH.matcher(path).find()) {
                 git = git.map(FilePath::getParent).map(FilePath::getParent);
             }
-            Optional<FilePath> sshAgentExe = git.map(p -> p.child(GIT_SSH_AGENT_PATH_WINDOWS));
-            if (sshAgentExe.isPresent() && sshAgentExe.get().exists()) {
-                return sshAgentExe;
+            // Probe candidate sub-paths: Git-for-Windows first, then Cygwin layout.
+            for (String candidatePath : GIT_SSH_AGENT_CANDIDATE_PATHS_WINDOWS) {
+                final String candidate = candidatePath;
+                Optional<FilePath> sshAgentExe = git.map(p -> p.child(candidate));
+                if (sshAgentExe.isPresent() && sshAgentExe.get().exists()) {
+                    return sshAgentExe;
+                }
             }
         }
         return Optional.empty();
