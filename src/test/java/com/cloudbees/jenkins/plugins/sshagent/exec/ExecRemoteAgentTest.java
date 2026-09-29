@@ -27,10 +27,20 @@ package com.cloudbees.jenkins.plugins.sshagent.exec;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.AbortException;
+import hudson.FilePath;
+import hudson.Launcher;
+import java.io.File;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 
 class ExecRemoteAgentTest {
@@ -76,5 +86,92 @@ class ExecRemoteAgentTest {
         // Converting it used to produce a driveless, relative path that ssh-add could not resolve.
         assertEquals(
                 "/tmp/ssh-kiwKu7uzgZkX/agent.792", ExecRemoteAgent.toWindowsPath("/tmp/ssh-kiwKu7uzgZkX/agent.792"));
+    }
+
+    // -----------------------------------------------------------------------
+    // extractGitSSHAgentExe – cygwin / Git-for-Windows path resolution
+    // -----------------------------------------------------------------------
+
+    /**
+     * Simulates a Git-for-Windows installation where ssh-agent.exe lives at
+     * {@code <git-home>/usr/bin/ssh-agent.exe}. The method must find it via
+     * the {@code usr/bin} candidate path (existing behaviour, unaffected by
+     * the Cygwin fix).
+     */
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/319")
+    @Test
+    void findsSSHAgentUnderUsrBinForGitForWindows(@TempDir File tempDir) throws Exception {
+        // Build: <tempDir>/usr/bin/ssh-agent.exe
+        File usrBin = new File(tempDir, "usr" + File.separator + "bin");
+        assertTrue(usrBin.mkdirs());
+        assertTrue(new File(usrBin, "ssh-agent.exe").createNewFile());
+
+        Launcher launcher = new Launcher.LocalLauncher(hudson.model.TaskListener.NULL);
+        Optional<FilePath> result = ExecRemoteAgent.extractGitSSHAgentExe(
+                List.of(tempDir.getAbsolutePath()), launcher);
+
+        assertTrue(result.isPresent(), "ssh-agent should be found under usr/bin (Git-for-Windows layout)");
+        assertTrue(result.get().getRemote().endsWith("ssh-agent.exe"));
+    }
+
+    /**
+     * Simulates a Cygwin installation where ssh-agent.exe lives directly at
+     * {@code <cygwin-root>/bin/ssh-agent.exe} (no {@code usr\} prefix).
+     * Without the fix this returned empty; with the fix it must return the
+     * correct path.
+     */
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/319")
+    @Test
+    void findsSSHAgentUnderBinForCygwin(@TempDir File tempDir) throws Exception {
+        // Build: <tempDir>/bin/ssh-agent.exe  (no usr/ prefix – Cygwin layout)
+        File bin = new File(tempDir, "bin");
+        assertTrue(bin.mkdirs());
+        assertTrue(new File(bin, "ssh-agent.exe").createNewFile());
+
+        Launcher launcher = new Launcher.LocalLauncher(hudson.model.TaskListener.NULL);
+        Optional<FilePath> result = ExecRemoteAgent.extractGitSSHAgentExe(
+                List.of(tempDir.getAbsolutePath()), launcher);
+
+        assertTrue(result.isPresent(), "ssh-agent should be found under bin/ (Cygwin layout)");
+        assertTrue(result.get().getRemote().endsWith("ssh-agent.exe"));
+    }
+
+    /**
+     * When neither candidate path contains ssh-agent.exe the method must
+     * return empty (no match).
+     */
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/319")
+    @Test
+    void returnsEmptyWhenSSHAgentNotFound(@TempDir File tempDir) throws Exception {
+        Launcher launcher = new Launcher.LocalLauncher(hudson.model.TaskListener.NULL);
+        Optional<FilePath> result = ExecRemoteAgent.extractGitSSHAgentExe(
+                List.of(tempDir.getAbsolutePath()), launcher);
+
+        assertFalse(result.isPresent(), "should return empty when no ssh-agent.exe exists");
+    }
+
+    /**
+     * When the path ends in {@code /bin/git.exe} the method strips two segments
+     * to reach the git home before probing. Verifies the Cygwin fallback still
+     * works after path normalisation when given {@code <cygwin-root>/bin/git.exe}
+     * as input (as returned by {@code where git} on a Cygwin node).
+     */
+    @Issue("https://github.com/jenkinsci/ssh-agent-plugin/pull/319")
+    @Test
+    @EnabledOnOs(OS.WINDOWS) // GIT_EXE_PATH regex matches backslash separators only; path stripping is Windows-only
+    void findsSSHAgentWhenGivenGitExePathInsteadOfGitHome(@TempDir File tempDir) throws Exception {
+        // Cygwin layout: <tempDir>/bin/git.exe and <tempDir>/bin/ssh-agent.exe
+        File bin = new File(tempDir, "bin");
+        assertTrue(bin.mkdirs());
+        assertTrue(new File(bin, "git.exe").createNewFile());
+        assertTrue(new File(bin, "ssh-agent.exe").createNewFile());
+
+        String gitExePath = new File(bin, "git.exe").getAbsolutePath();
+        Launcher launcher = new Launcher.LocalLauncher(hudson.model.TaskListener.NULL);
+        Optional<FilePath> result = ExecRemoteAgent.extractGitSSHAgentExe(
+                List.of(gitExePath), launcher);
+
+        assertTrue(result.isPresent(), "ssh-agent should be found when given a git.exe path (Cygwin layout)");
+        assertTrue(result.get().getRemote().endsWith("ssh-agent.exe"));
     }
 }
