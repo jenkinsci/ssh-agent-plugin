@@ -254,7 +254,10 @@ class SSHAgentStepWorkflowTest extends SSHAgentBase {
             SemaphoreStep.waitForStart("upAndRunning/1", run);
 
             r.disconnectSlave(agent);
-            r.waitOnline(agent);
+            // Not JenkinsRule#waitOnline: it tails the agent log while the reconnect rotates that
+            // file, which fails on Windows because a file that is open cannot be renamed there.
+            agent.toComputer().connect(false).get();
+            agent.toComputer().waitUntilOnline();
 
             SemaphoreStep.success("upAndRunning/1", null);
 
